@@ -2066,7 +2066,6 @@ async function executeEnemyTurn() {
   
   e.tempDamage = 0; e.tempDef = 0; e.tempAcc = 0; e.tempEva = 0;
   
-  // FIX: applyPassive now directly modifies STATE.clarity for enemy Coke Bard too
   applyPassive(e, STATE.chaos, false);
   
   const availableMoves = e.moves.map((m, i) => ({ m, i })).filter(x => e.cooldowns[x.i] <= 0);
@@ -2105,7 +2104,6 @@ async function executeEnemyTurn() {
   
   const result = resolveAttack(e, p, move, STATE.chaos, STATE.clarity, false);
   
-  // FIX: Only call updateCombo ONCE for enemy too
   updateCombo(e, moveIndex, move, result.hit);
   
   if (result.hit && move.damage > 0) {
@@ -2143,17 +2141,16 @@ async function executeEnemyTurn() {
   
   await processEndOfRound();
   
+  // ✅ FIX: Check if game ended during processEndOfRound
+  if (STATE.phase !== 'battle') return;
+  
   e.cooldowns = e.cooldowns.map(c => Math.max(0, c - 1));
   
-  // FIX: Switch actor to player and increment turn ONLY HERE (once per round)
   STATE.currentActor = 'player';
   STATE.turn++;
-  
-  // FIX: Remove the re-evaluation of initiative that caused consecutive enemy turns
-  // Now it simply returns to player after enemy turn
+  STATE.inputLocked = false;  // ✅ FIX: Moved BEFORE render()
   
   render();
-  STATE.inputLocked = false;
   startTurnTimer();
 }
 
