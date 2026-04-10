@@ -1,0 +1,36 @@
+🎮 How To Play
+Choose Your Fighter - Each has unique stats, moves, and passives
+Select Moves - Consider tags, cooldowns, and enemy state
+Manage Meters - High Chaos = unpredictable; High Clarity = victory
+Discover Combos - Chain specific moves for bonus effects
+Exploit Weaknesses - Use Speed against Sloppy, Stealth against Projectile
+Win - By any means necessary
+Tag Interaction Cheat Sheet
+Your Tag	vs Enemy's Last Tag	Result
+Speed	Sloppy	+50% damage 💪
+Stealth	Sloppy	+30% damage
+Projectile	Sloppy	+40% damage
+Speed	Stealth	-10% damage 😬
+Projectile	Stealth	-30% damage
+📸 Screenshots
+Add your screenshots here!
+
+🤝 Contributing
+Found a bug? Have a fighter idea? Want to add a "Ketamine Centaur"?
+
+Fork it
+Create your feature branch (git checkout -b feature/ketamine-centaur)
+Commit your changes (git commit -m 'Add Ketamine Centaur')
+Push to the branch (git push origin feature/ketamine-centaur)
+Open a Pull Request
+
+📜 License
+MIT License - Do whatever you want, just don't blame me when HR asks questions.
+
+🙏 Acknowledgments
+Coffee ☕
+Insomnia 😴
+The voices that demanded this game be made 👻
+Choose your fighter. Choose poorly.
+
+Made with 🔥 chaos and ✨ clarity
