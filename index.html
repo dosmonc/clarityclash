@@ -1344,14 +1344,14 @@ const AnimationManager = {
     const clarityFill = document.querySelector('.meter-fill-clarity');
     const chaosValue = document.querySelector('.meter-chaos .meter-header span:last-child');
     const clarityValue = document.querySelector('.meter-clarity .meter-header span:last-child');
-    const chaosLabel = document.querySelector('.meter-chaos .meter-label');
+    const chaosLabelEl = document.querySelector('.meter-chaos .meter-label');
     const clarityLabelEl = document.querySelector('.meter-clarity .meter-label');
     
     if (chaosFill) chaosFill.style.width = STATE.chaos + '%';
     if (clarityFill) clarityFill.style.width = STATE.clarity + '%';
     if (chaosValue) chaosValue.textContent = Math.round(STATE.chaos);
     if (clarityValue) clarityValue.textContent = Math.round(STATE.clarity);
-    if (chaosLabel) chaosLabel.textContent = chaosLabelText(STATE.chaos);
+    if (chaosLabelEl) chaosLabelEl.textContent = chaosLabelText(STATE.chaos);
     if (clarityLabelEl) clarityLabelEl.textContent = clarityLabelText(STATE.clarity);
   },
   
@@ -2951,18 +2951,18 @@ function renderBattle() {
   '</div>';
   
   // Meters
-  html += '<div class="meters">' +
-    '<div class="meter meter-chaos">' +
-      '<div class="meter-header"><span>🔥 CHAOS</span><span>' + Math.round(STATE.chaos) + '</span></div>' +
-      '<div class="meter-bar"><div class="meter-fill-chaos" style="width:' + STATE.chaos + '%"></div></div>' +
-      '<div class="meter-label">' + chaosLabel(STATE.chaos) + '</div>' +
-    '</div>' +
-    '<div class="meter meter-clarity">' +
-      '<div class="meter-header"><span>✨ CLARITY</span><span>' + Math.round(STATE.clarity) + '</span></div>' +
-      '<div class="meter-bar"><div class="meter-fill-clarity" style="width:' + STATE.clarity + '%"></div></div>' +
-      '<div class="meter-label">' + clarityLabel(STATE.clarity) + '</div>' +
-    '</div>' +
-  '</div>';
+html += '<div class="meters">' +
+  '<div class="meter meter-chaos">' +
+    '<div class="meter-header"><span>🔥 CHAOS</span><span>' + Math.round(STATE.chaos) + '</span></div>' +
+    '<div class="meter-bar"><div class="meter-fill-chaos" style="width:' + STATE.chaos + '%"></div></div>' +
+    '<div class="meter-label">' + chaosLabelText(STATE.chaos) + '</div>' +
+  '</div>' +
+  '<div class="meter meter-clarity">' +
+    '<div class="meter-header"><span>✨ CLARITY</span><span>' + Math.round(STATE.clarity) + '</span></div>' +
+    '<div class="meter-bar"><div class="meter-fill-clarity" style="width:' + STATE.clarity + '%"></div></div>' +
+    '<div class="meter-label">' + clarityLabelText(STATE.clarity) + '</div>' +
+  '</div>' +
+'</div>';
   
   // Combo display (only if active)
   if (isActive && (p.comboMultiplier > 1 || comboHint)) {
