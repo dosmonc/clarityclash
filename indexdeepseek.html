@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity Clash: Chaos Arena</title>
+    <style>
+        :root {
+            --primary: #2a0c4e;
+            --secondary: #4c1d95;
+            --accent: #8b5cf6;
+            --text: #f0e7fe;
+            --chaos: #dc2626;
+            --clarity: #3b82f6;
+            --background: #0f0f23;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            padding: 20px;
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(220, 38, 38, 0.1) 0%, transparent 20%);
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 20px;
+            background-color: rgba(42, 12, 78, 0.8);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+        
+        h1, h2, h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--accent);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 30px;
+        }
+        
+        .screen {
+            display: none;
+        }
+        
+        .active {
+            display: block;
+        }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .character-card {
+            background: linear-gradient(145deg, var(--primary), var(--secondary));
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .character-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+        }
+        
+        .character-card h3 {
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+        
+        .stat {
+            background-color: rgba(139, 92, 246, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .moves-list {
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .move {
+            margin-bottom: 5px;
+            padding-left: 10px;
+            border-left: 2px solid var(--accent);
+        }
+        
+        button {
+            background: linear-gradient(145deg, var(--secondary), var(--primary));
+            color: var(--text);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: linear-gradient(145deg, var(--primary), var(--secondary));
+            box-shadow: 0 0 10px var(--accent);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .battle-ui {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            gap: 20px;
+        }
+        
+        .character-panel {
+            flex: 1;
+            background: linear-gradient(145deg, var(--primary), var(--secondary));
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .health-bar {
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #22c55e);
+            transition: width 0.3s;
+        }
+        
+        .meters {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            gap: 20px;
+        }
+        
+        .meter {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .meter-bar {
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .chaos-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--chaos), #f59e0b);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .clarity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--clarity), #06b6d4);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .moves-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .move-btn {
+            padding: 15px 10px;
+            text-align: center;
+        }
+        
+        .battle-log {
+            height: 200px;
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        .event {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+        
+        .commentary {
+            color: #8b5cf6;
+            font-style: italic;
+        }
+        
+        .damage {
+            color: #ef4444;
+        }
+        
+        .heal {
+            color: #22c55e;
+        }
+        
+        .center {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .shared-move {
+            grid-column: span 2;
+            background: linear-gradient(145deg, #4c1d95, #6d28d9);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clarity Clash: Chaos Arena</h1>
+        
+        <div id="character-select" class="screen active">
+            <h2>Select Your Champion</h2>
+            <div class="character-grid">
+                <div class="character-card" data-class="crack-fairy">
+                    <h3>Crack Fairy</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 80</span>
+                        <span class="stat">DMG: 15</span>
+                        <span class="stat">DEF: 5</span>
+                        <span class="stat">ACC: 85%</span>
+                        <span class="stat">EVA: 30%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Sparkle Slam (speed)</div>
+                        <div class="move">Sugar Rush (sloppy)</div>
+                        <div class="move">Twinkle Twirl (stealth)</div>
+                        <div class="move">Glitter Bomb (projectile)</div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-class="meth-wizard">
+                    <h3>Meth Wizard</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 70</span>
+                        <span class="stat">DMG: 25</span>
+                        <span class="stat">DEF: 3</span>
+                        <span class="stat">ACC: 70%</span>
+                        <span class="stat">EVA: 20%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Tweak Lightning (projectile)</div>
+                        <div class="move">Jitter Shield (sloppy)</div>
+                        <div class="move">Paranoia Cloak (stealth)</div>
+                        <div class="move">Hyper Focus (speed)</div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-class="coke-bard">
+                    <h3>Coke Bard</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 85</span>
+                        <span class="stat">DMG: 12</span>
+                        <span class="stat">DEF: 8</span>
+                        <span class="stat">ACC: 90%</span>
+                        <span class="stat">EVA: 25%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Riff of Rage (projectile)</div>
+                        <div class="move">Adderall Anthem (speed)</div>
+                        <div class="move">Nose Flute Solo (sloppy)</div>
+                        <div class="move">Charisma Overload (stealth)</div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-class="drunken-dwarf">
+                    <h3>Drunken Dwarf</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 110</span>
+                        <span class="stat">DMG: 18</span>
+                        <span class="stat">DEF: 12</span>
+                        <span class="stat">ACC: 60%</span>
+                        <span class="stat">EVA: 10%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Ale Toss (projectile)</div>
+                        <div class="move">Stagger Strike (sloppy)</div>
+                        <div class="move">Barrel Roll (stealth)</div>
+                        <div class="move">Hangover Rage (speed)</div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-class="benzo-elf">
+                    <h3>Benzo Elf</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 90</span>
+                        <span class="stat">DMG: 10</span>
+                        <span class="stat">DEF: 15</span>
+                        <span class="stat">ACC: 95%</span>
+                        <span class="stat">EVA: 35%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Chill Arrow (projectile)</div>
+                        <div class="move">Apathy Aura (stealth)</div>
+                        <div class="move">Numb Strike (speed)</div>
+                        <div class="move">Sedative Cloud (sloppy)</div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-class="heroin-gnome">
+                    <h3>Heroin Gnome</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 75</span>
+                        <span class="stat">DMG: 8</span>
+                        <span class="stat">DEF: 20</span>
+                        <span class="stat">ACC: 75%</span>
+                        <span class="stat">EVA: 5%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Nod Off (stealth)</div>
+                        <div class="move">Needle Poke (speed)</div>
+                        <div class="move">Comfort Blanket (sloppy)</div>
+                        <div class="move">Dream Smoke (projectile)</div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-class="ass-goblin">
+                    <h3>Ass Goblin</h3>
+                    <div class="stats">
+                        <span class="stat">HP: 100</span>
+                        <span class="stat">DMG: 20</span>
+                        <span class="stat">DEF: 7</span>
+                        <span class="stat">ACC: 65%</span>
+                        <span class="stat">EVA: 15%</span>
+                    </div>
+                    <div class="moves-list">
+                        <div class="move">Cheek Clap (sloppy)</div>
+                        <div class="move">Fart Cloud (stealth)</div>
+                        <div class="move">Taint Punch (speed)</div>
+                        <div class="move">Brown Streak (projectile)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="center">
+                <button id="start-battle">Enter the Arena</button>
+            </div>
+        </div>
+        
+        <div id="battle-screen" class="screen">
+            <h2 id="battle-title">Clarity Clash</h2>
+            
+            <div class="battle-ui">
+                <div class="character-panel" id="player-panel">
+                    <h3 id="player-name">Player</h3>
+                    <div class="health-bar">
+                        <div class="health-fill" id="player-health-bar"></div>
+                    </div>
+                    <div id="player-stats"></div>
+                </div>
+                
+                <div class="character-panel" id="enemy-panel">
+                    <h3 id="enemy-name">Enemy</h3>
+                    <div class="health-bar">
+                        <div class="health-fill" id="enemy-health-bar"></div>
+                    </div>
+                    <div id="enemy-stats"></div>
+                </div>
+            </div>
+            
+            <div class="meters">
+                <div class="meter">
+                    <h3>CHAOS</h3>
+                    <div class="meter-bar">
+                        <div class="chaos-fill" id="chaos-bar"></div>
+                    </div>
+                    <div id="chaos-value">0%</div>
+                </div>
+                
+                <div class="meter">
+                    <h3>CLARITY</h3>
+                    <div class="meter-bar">
+                        <div class="clarity-fill" id="clarity-bar"></div>
+                    </div>
+                    <div id="clarity-value">0%</div>
+                </div>
+            </div>
+            
+            <div class="moves-container" id="moves-container">
+                <!-- Moves will be populated by JavaScript -->
+            </div>
+            
+            <div class="battle-log" id="battle-log">
+                <div class="log-entry">The battle begins...</div>
+            </div>
+            
+            <div class="center">
+                <button id="copy-log">Copy Battle Log</button>
+                <button id="new-game">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Data
+        const classes = {
+            'crack-fairy': {
+                name: 'Crack Fairy',
+                hp: 80,
+                damage: 15,
+                defense: 5,
+                accuracy: 85,
+                evasion: 30,
+                moves: [
+                    { name: 'Sparkle Slam', tags: ['speed'], description: 'A dazzlingly fast attack' },
+                    { name: 'Sugar Rush', tags: ['sloppy'], description: 'An erratic but powerful strike' },
+                    { name: 'Twinkle Twirl', tags: ['stealth'], description: 'A deceptive maneuver' },
+                    { name: 'Glitter Bomb', tags: ['projectile'], description: 'A sparkling projectile attack' }
+                ]
+            },
+            'meth-wizard': {
+                name: 'Meth Wizard',
+                hp: 70,
+                damage: 25,
+                defense: 3,
+                accuracy: 70,
+                evasion: 20,
+                moves: [
+                    { name: 'Tweak Lightning', tags: ['projectile'], description: 'A jittery bolt of energy' },
+                    { name: 'Jitter Shield', tags: ['sloppy'], description: 'An unpredictable defensive move' },
+                    { name: 'Paranoia Cloak', tags: ['stealth'], description: 'Become hard to target' },
+                    { name: 'Hyper Focus', tags: ['speed'], description: 'A rapid series of attacks' }
+                ]
+            },
+            'coke-bard': {
+                name: 'Coke Bard',
+                hp: 85,
+                damage: 12,
+                defense: 8,
+                accuracy: 90,
+                evasion: 25,
+                moves: [
+                    { name: 'Riff of Rage', tags: ['projectile'], description: 'A sonic attack that hurts the ears' },
+                    { name: 'Adderall Anthem', tags: ['speed'], description: 'A rapid series of notes' },
+                    { name: 'Nose Flute Solo', tags: ['sloppy'], description: 'An erratic performance' },
+                    { name: 'Charisma Overload', tags: ['stealth'], description: 'A distracting display of charm' }
+                ]
+            },
+            'drunken-dwarf': {
+                name: 'Drunken Dwarf',
+                hp: 110,
+                damage: 18,
+                defense: 12,
+                accuracy: 60,
+                evasion: 10,
+                moves: [
+                    { name: 'Ale Toss', tags: ['projectile'], description: 'Throw a mug of ale' },
+                    { name: 'Stagger Strike', tags: ['sloppy'], description: 'An unpredictable drunken attack' },
+                    { name: 'Barrel Roll', tags: ['stealth'], description: 'A deceptive rolling maneuver' },
+                    { name: 'Hangover Rage', tags: ['speed'], description: 'A fast but painful attack' }
+                ]
+            },
+            'benzo-elf': {
+                name: 'Benzo Elf',
+                hp: 90,
+                damage: 10,
+                defense: 15,
+                accuracy: 95,
+                evasion: 35,
+                moves: [
+                    { name: 'Chill Arrow', tags: ['projectile'], description: 'A relaxed but accurate shot' },
+                    { name: 'Apathy Aura', tags: ['stealth'], description: 'Make yourself less noticeable' },
+                    { name: 'Numb Strike', tags: ['speed'], description: 'A quick, painless attack' },
+                    { name: 'Sedative Cloud', tags: ['sloppy'], description: 'A cloud that causes sluggishness' }
+                ]
+            },
+            'heroin-gnome': {
+                name: 'Heroin Gnome',
+                hp: 75,
+                damage: 8,
+                defense: 20,
+                accuracy: 75,
+                evasion: 5,
+                moves: [
+                    { name: 'Nod Off', tags: ['stealth'], description: 'Become hard to notice' },
+                    { name: 'Needle Poke', tags: ['speed'], description: 'A quick, sharp attack' },
+                    { name: 'Comfort Blanket', tags: ['sloppy'], description: 'An unpredictable defensive move' },
+                    { name: 'Dream Smoke', tags: ['projectile'], description: 'A hazy projectile' }
+                ]
+            },
+            'ass-goblin': {
+                name: 'Ass Goblin',
+                hp: 100,
+                damage: 20,
+                defense: 7,
+                accuracy: 65,
+                evasion: 15,
+                moves: [
+                    { name: 'Cheek Clap', tags: ['sloppy'], description: 'An embarrassing attack' },
+                    { name: 'Fart Cloud', tags: ['stealth'], description: 'Create a smokescreen' },
+                    { name: 'Taint Punch', tags: ['speed'], description: 'A surprisingly fast strike' },
+                    { name: 'Brown Streak', tags: ['projectile'], description: 'A messy projectile attack' }
+                ]
+            }
+        };
+
+        const randomEvents = [
+            {
+                name: 'Found a Rock',
+                description: 'You trip over a rock on the battlefield.',
+                effects: { chaos: 10, clarity: -5 }
+            },
+            {
+                name: 'Phone Buzzed',
+                description: 'Your phone vibrates with a notification.',
+                effects: { chaos: 15, clarity: -10 }
+            },
+            {
+                name: 'Sudden Confidence',
+                description: 'You feel inexplicably confident.',
+                effects: { chaos: -5, clarity: 15 }
+            },
+            {
+                name: 'Existential Thought',
+                description: 'You ponder the meaning of it all.',
+                effects: { chaos: 20, clarity: 10 }
+            },
+            {
+                name: 'Knocking at the Door',
+                description: 'You hear a distant knocking sound.',
+                effects: { chaos: 25, clarity: -15 }
+            },
+            {
+                name: 'Deja Vu',
+                description: 'You feel like you\'ve been here before.',
+                effects: { chaos: 15, clarity: 5 }
+            },
+            {
+                name: 'Unexpected Breeze',
+                description: 'A sudden gust of wind changes the battlefield.',
+                effects: { chaos: 10, clarity: -5 }
+            },
+            {
+                name: 'Butterfly',
+                description: 'A butterfly distracts everyone.',
+                effects: { chaos: 5, clarity: -10 }
+            }
+        ];
+
+        const commentary = [
+            "That did not go how anyone planned.",
+            "Confidence was high. Accuracy was not.",
+            "The situation has worsened creatively.",
+            "This is going well for exactly no one.",
+            "Tactics were considered, then abandoned.",
+            "Someone probably should have practiced more.",
+            "This is the worst strategy ever witnessed.",
+            "The gods of battle are facepalming.",
+            "That move was questionably legal at best.",
+            "This is why we can't have nice things.",
+            "The concept of 'aim' has been forgotten.",
+            "That was less attack, more performance art."
+        ];
+
+        // Game State
+        let gameState = {
+            player: null,
+            enemy: null,
+            playerHP: 0,
+            enemyHP: 0,
+            chaos: 0,
+            clarity: 0,
+            log: [],
+            battleHistory: []
+        };
+
+        // DOM Elements
+        const characterSelectScreen = document.getElementById('character-select');
+        const battleScreen = document.getElementById('battle-screen');
+        const playerPanel = document.getElementById('player-panel');
+        const enemyPanel = document.getElementById('enemy-panel');
+        const playerHealthBar = document.getElementById('player-health-bar');
+        const enemyHealthBar = document.getElementById('enemy-health-bar');
+        const chaosBar = document.getElementById('chaos-bar');
+        const clarityBar = document.getElementById('clarity-bar');
+        const chaosValue = document.getElementById('chaos-value');
+        const clarityValue = document.getElementById('clarity-value');
+        const movesContainer = document.getElementById('moves-container');
+        const battleLog = document.getElementById('battle-log');
+        const startBattleBtn = document.getElementById('start-battle');
+        const copyLogBtn = document.getElementById('copy-log');
+        const newGameBtn = document.getElementById('new-game');
+        const playerName = document.getElementById('player-name');
+        const enemyName = document.getElementById('enemy-name');
+        const playerStats = document.getElementById('player-stats');
+        const enemyStats = document.getElementById('enemy-stats');
+        const battleTitle = document.getElementById('battle-title');
+
+        // Initialize Game
+        function init() {
+            // Set up event listeners
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.addEventListener('click', () => selectCharacter(card.dataset.class));
+            });
+            
+            startBattleBtn.addEventListener('click', startBattle);
+            copyLogBtn.addEventListener('click', copyBattleLog);
+            newGameBtn.addEventListener('click', resetGame);
+            
+            // Initialize with a random selection
+            const randomClass = Object.keys(classes)[Math.floor(Math.random() * Object.keys(classes).length)];
+            selectCharacter(randomClass);
+        }
+
+        // Select Character
+        function selectCharacter(className) {
+            gameState.player = classes[className];
+            gameState.playerHP = gameState.player.hp;
+            
+            // Select random enemy (different from player)
+            let enemyClasses = Object.keys(classes).filter(c => c !== className);
+            const enemyClass = enemyClasses[Math.floor(Math.random() * enemyClasses.length)];
+            gameState.enemy = classes[enemyClass];
+            gameState.enemyHP = gameState.enemy.hp;
+            
+            // Update UI
+            playerName.textContent = gameState.player.name;
+            enemyName.textContent = gameState.enemy.name;
+            
+            playerStats.innerHTML = `
+                <div class="stat">HP: ${gameState.playerHP}/${gameState.player.hp}</div>
+                <div class="stat">DMG: ${gameState.player.damage}</div>
+                <div class="stat">DEF: ${gameState.player.defense}</div>
+            `;
+            
+            enemyStats.innerHTML = `
+                <div class="stat">HP: ${gameState.enemyHP}/${gameState.enemy.hp}</div>
+                <div class="stat">DMG: ${gameState.enemy.damage}</div>
+                <div class="stat">DEF: ${gameState.enemy.defense}</div>
+            `;
+            
+            playerHealthBar.style.width = '100%';
+            enemyHealthBar.style.width = '100%';
+            
+            // Highlight selected character
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.style.border = card.dataset.class === className ? 
+                    '3px solid #8b5cf6' : '2px solid #8b5cf6';
+            });
+            
+            battleTitle.textContent = `${gameState.player.name} vs ${gameState.enemy.name}`;
+        }
+
+        // Start Battle
+        function startBattle() {
+            if (!gameState.player) return;
+            
+            // Reset game state
+            gameState.playerHP = gameState.player.hp;
+            gameState.enemyHP = gameState.enemy.hp;
+            gameState.chaos = 0;
+            gameState.clarity = 0;
+            gameState.log = [];
+            gameState.battleHistory = [];
+            
+            // Update UI
+            characterSelectScreen.classList.remove('active');
+            battleScreen.classList.add('active');
+            
+            updateHealthBars();
+            updateMeters();
+            
+            // Create move buttons
+            movesContainer.innerHTML = '';
+            
+            gameState.player.moves.forEach((move, index) => {
+                const button = document.createElement('button');
+                button.className = 'move-btn';
+                button.textContent = move.name;
+                button.addEventListener('click', () => playerTurn(index));
+                movesContainer.appendChild(button);
+            });
+            
+            // Add shared move
+            const sharedMove = document.createElement('button');
+            sharedMove.className = 'move-btn shared-move';
+            sharedMove.textContent = 'Let Me Hold 5 Dollars';
+            sharedMove.addEventListener('click', () => useSharedMove());
+            movesContainer.appendChild(sharedMove);
+            
+            // Initial log entry
+            addToLog(`The battle between ${gameState.player.name} and ${gameState.enemy.name} begins!`, 'event');
+            addToLog(commentary[Math.floor(Math.random() * commentary.length)], 'commentary');
+        }
+
+        // Player Turn
+        function playerTurn(moveIndex) {
+            if (gameState.playerHP <= 0 || gameState.enemyHP <= 0) return;
+            
+            const move = moveIndex === 'shared' ? 
+                { name: 'Let Me Hold 5 Dollars', tags: ['sloppy'] } : 
+                gameState.player.moves[moveIndex];
+            
+            // Record player move
+            gameState.battleHistory.push({ attacker: 'player', move: move.name });
+            
+            // Execute move
+            const damage = calculateDamage(gameState.player, gameState.enemy, move);
+            
+            if (damage > 0) {
+                gameState.enemyHP -= damage;
+                addToLog(`${gameState.player.name} uses ${move.name} and deals <span class="damage">${damage} damage</span> to ${gameState.enemy.name}!`);
+            } else {
+                addToLog(`${gameState.player.name} uses ${move.name} but it misses!`);
+            }
+            
+            // Check for win condition
+            if (gameState.enemyHP <= 0) {
+                endBattle('player');
+                return;
+            }
+            
+            // Add random event
+            if (Math.random() < 0.3) {
+                triggerRandomEvent();
+            }
+            
+            // Update UI
+            updateHealthBars();
+            updateMeters();
+            
+            // Check for clarity win
+            if (gameState.clarity >= 100) {
+                addToLog(`${gameState.player.name} achieves ultimate clarity and wins through enlightenment!`, 'event');
+                endBattle('player');
+                return;
+            }
+            
+            // Enemy turn
+            setTimeout(enemyTurn, 1000);
+        }
+
+        // Use Shared Move
+        function useSharedMove() {
+            if (gameState.playerHP <= 0 || gameState.enemyHP <= 0) return;
+            
+            // Record player move
+            gameState.battleHistory.push({ attacker: 'player', move: 'Let Me Hold 5 Dollars' });
+            
+            // Effect of shared move
+            const success = Math.random() < 0.5;
+            
+            if (success) {
+                const stolen = Math.floor(Math.random() * 10) + 5;
+                gameState.enemyHP -= stolen;
+                gameState.playerHP += stolen;
+                
+                addToLog(`${gameState.player.name} asks to hold 5 dollars and somehow steals <span class="damage">${stolen} HP</span> from ${gameState.enemy.name}!`);
+                addToLog(`${gameState.player.name} gains <span class="heal">${stolen} HP</span> from the exchange!`);
+            } else {
+                addToLog(`${gameState.player.name} asks to hold 5 dollars but ${gameState.enemy.name} says no. Awkward.`);
+            }
+            
+            // Check for win condition
+            if (gameState.enemyHP <= 0) {
+                endBattle('player');
+                return;
+            }
+            
+            // Add random event
+            if (Math.random() < 0.4) {
+                triggerRandomEvent();
+            }
+            
+            // Update UI
+            updateHealthBars();
+            updateMeters();
+            
+            // Enemy turn
+            setTimeout(enemyTurn, 1000);
+        }
+
+        // Enemy Turn
+        function enemyTurn() {
+            if (gameState.playerHP <= 0 || gameState.enemyHP <= 0) return;
+            
+            // Choose random move (including shared move)
+            const moveChoice = Math.random() < 0.2 ? 'shared' : Math.floor(Math.random() * gameState.enemy.moves.length);
+            const move = moveChoice === 'shared' ? 
+                { name: 'Let Me Hold 5 Dollars', tags: ['sloppy'] } : 
+                gameState.enemy.moves[moveChoice];
+            
+            // Record enemy move
+            gameState.battleHistory.push({ attacker: 'enemy', move: move.name });
+            
+            // Execute move
+            const damage = calculateDamage(gameState.enemy, gameState.player, move);
+            
+            if (damage > 0) {
+                gameState.playerHP -= damage;
+                addToLog(`${gameState.enemy.name} uses ${move.name} and deals <span class="damage">${damage} damage</span> to ${gameState.player.name}!`);
+            } else {
+                addToLog(`${gameState.enemy.name} uses ${move.name} but it misses!`);
+            }
+            
+            // Check for win condition
+            if (gameState.playerHP <= 0) {
+                endBattle('enemy');
+                return;
+            }
+            
+            // Add random event
+            if (Math.random() < 0.3) {
+                triggerRandomEvent();
+            }
+            
+            // Update UI
+            updateHealthBars();
+            updateMeters();
+            
+            // Check for chaos loss
+            if (gameState.chaos >= 100) {
+                addToLog(`The chaos becomes overwhelming and ${gameState.player.name} loses all sense of reality!`, 'event');
+                endBattle('enemy');
+                return;
+            }
+        }
+
+        // Calculate Damage
+        function calculateDamage(attacker, defender, move) {
+            // Base accuracy check
+            let accuracy = attacker.accuracy;
+            
+            // Interaction logic based on tags
+            if (move.tags.includes('stealth') && Math.random() < defender.evasion / 100) {
+                return 0; // Stealth attack evaded
+            }
+            
+            if (move.tags.includes('sloppy')) {
+                accuracy -= 20; // Sloppy moves are less accurate
+                gameState.chaos += 5;
+            }
+            
+            if (move.tags.includes('speed')) {
+                accuracy += 10; // Speed moves are more accurate
+                gameState.clarity += 5;
+            }
+            
+            // Check if attack hits
+            if (Math.random() > accuracy / 100) {
+                return 0; // Miss
+            }
+            
+            // Calculate base damage
+            let damage = attacker.damage + Math.floor(Math.random() * 6) - 2;
+            
+            // Projectile interaction
+            if (move.tags.includes('projectile') && Math.random() < defender.evasion / 100) {
+                damage = Math.floor(damage / 2); // Projectiles can be partially dodged
+            }
+            
+            // Apply defense
+            damage = Math.max(1, damage - defender.defense);
+            
+            // Update chaos/clarity based on damage
+            if (damage > attacker.damage) {
+                gameState.clarity += 5;
+            } else if (damage < attacker.damage / 2) {
+                gameState.chaos += 5;
+            }
+            
+            return damage;
+        }
+
+        // Trigger Random Event
+        function triggerRandomEvent() {
+            const event = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+            
+            // Apply effects
+            gameState.chaos = Math.max(0, Math.min(100, gameState.chaos + event.effects.chaos));
+            gameState.clarity = Math.max(0, Math.min(100, gameState.clarity + event.effects.clarity));
+            
+            addToLog(`<span class="event">${event.name}:</span> ${event.description}`, 'event');
+            
+            // Add commentary
+            if (Math.random() < 0.5) {
+                addToLog(commentary[Math.floor(Math.random() * commentary.length)], 'commentary');
+            }
+            
+            updateMeters();
+        }
+
+        // Update Health Bars
+        function updateHealthBars() {
+            const playerHealthPercent = (gameState.playerHP / gameState.player.hp) * 100;
+            const enemyHealthPercent = (gameState.enemyHP / gameState.enemy.hp) * 100;
+            
+            playerHealthBar.style.width = `${playerHealthPercent}%`;
+            enemyHealthBar.style.width = `${enemyHealthPercent}%`;
+            
+            playerStats.innerHTML = `
+                <div class="stat">HP: ${gameState.playerHP}/${gameState.player.hp}</div>
+                <div class="stat">DMG: ${gameState.player.damage}</div>
+                <div class="stat">DEF: ${gameState.player.defense}</div>
+            `;
+            
+            enemyStats.innerHTML = `
+                <div class="stat">HP: ${gameState.enemyHP}/${gameState.enemy.hp}</div>
+                <div class="stat">DMG: ${gameState.enemy.damage}</div>
+                <div class="stat">DEF: ${gameState.enemy.defense}</div>
+            `;
+        }
+
+        // Update Meters
+        function updateMeters() {
+            chaosBar.style.width = `${gameState.chaos}%`;
+            clarityBar.style.width = `${gameState.clarity}%`;
+            
+            chaosValue.textContent = `${gameState.chaos}%`;
+            clarityValue.textContent = `${gameState.clarity}%`;
+        }
+
+        // Add to Log
+        function addToLog(message, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = message;
+            
+            battleLog.appendChild(entry);
+            battleLog.scrollTop = battleLog.scrollHeight;
+            
+            gameState.log.push(message);
+        }
+
+        // End Battle
+        function endBattle(winner) {
+            if (winner === 'player') {
+                addToLog(`<span class="heal">${gameState.player.name} wins the battle!</span>`, 'event');
+                addToLog("This probably won't look good on anyone's permanent record.", 'commentary');
+            } else {
+                addToLog(`<span class="damage">${gameState.enemy.name} wins the battle!</span>`, 'event');
+                addToLog("Maybe try a different strategy next time. Or don't. It's your life.", 'commentary');
+            }
+            
+            // Disable move buttons
+            document.querySelectorAll('.move-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+        }
+
+        // Copy Battle Log
+        function copyBattleLog() {
+            const logText = gameState.log.map(entry => {
+                // Remove HTML tags for plain text
+                const div = document.createElement('div');
+                div.innerHTML = entry;
+                return div.textContent || div.innerContent;
+            }).join('\n');
+            
+            const battleSummary = `CLARITY CLASH: CHAOS ARENA\n${battleTitle.textContent}\n\n${logText}`;
+            
+            navigator.clipboard.writeText(battleSummary).then(() => {
+                addToLog('Battle log copied to clipboard! Share the chaos!', 'event');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        // Reset Game
+        function resetGame() {
+            battleScreen.classList.remove('active');
+            characterSelectScreen.classList.add('active');
+        }
+
+        // Initialize the game when the page loads
+        window.onload = init;
+    </script>
+</body>
+</html>

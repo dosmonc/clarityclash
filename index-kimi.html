@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity Clash: Chaos Arena</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Roboto+Mono:wght@400;700&family=Bangers&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #eee;
+            font-family: 'Roboto Mono', monospace;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .chaos-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(255, 0, 255, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 255, 0.03) 3px
+            );
+            animation: scanline 8s linear infinite;
+            z-index: 1000;
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            font-family: 'Creepster', cursive;
+            font-size: 4rem;
+            text-align: center;
+            color: #ff00ff;
+            text-shadow: 3px 3px #00ffff, -3px -3px #ffff00;
+            margin-bottom: 10px;
+            animation: glitch 2s infinite;
+        }
+        
+        @keyframes glitch {
+            0%, 100% { text-shadow: 3px 3px #00ffff, -3px -3px #ffff00; }
+            25% { text-shadow: -3px 3px #ff0000, 3px -3px #00ff00; }
+            50% { text-shadow: 3px -3px #ffff00, -3px 3px #00ffff; }
+            75% { text-shadow: -3px -3px #00ffff, 3px 3px #ff00ff; }
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        
+        /* Character Select Screen */
+        .character-select {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .character-card {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
+            border: 3px solid #444;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .character-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: #ff00ff;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+        
+        .character-card.selected {
+            border-color: #00ff00;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+            background: linear-gradient(145deg, #2a4a2a, #1a2e1a);
+        }
+        
+        .character-name {
+            font-family: 'Bangers', cursive;
+            font-size: 1.8rem;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+        
+        .character-desc {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .character-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+        }
+        
+        .stat-label { color: #888; }
+        .stat-value { color: #0ff; font-weight: bold; }
+        
+        /* Battle Screen */
+        .battle-screen {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .battle-arena {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 20px;
+        }
+        
+        .fighter {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
+            border-radius: 20px;
+            padding: 20px;
+            border: 3px solid;
+            position: relative;
+        }
+        
+        .fighter.player { border-color: #00ff00; }
+        .fighter.enemy { border-color: #ff0000; }
+        
+        .fighter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .fighter-name {
+            font-family: 'Bangers', cursive;
+            font-size: 1.5rem;
+        }
+        
+        .fighter-class {
+            font-size: 0.8rem;
+            color: #888;
+            background: rgba(0,0,0,0.5);
+            padding: 3px 10px;
+            border-radius: 10px;
+        }
+        
+        .hp-bar-container {
+            background: #333;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .hp-bar {
+            height: 100%;
+            transition: all 0.5s;
+            position: relative;
+        }
+        
+        .hp-bar.player { background: linear-gradient(90deg, #00ff00, #00aa00); }
+        .hp-bar.enemy { background: linear-gradient(90deg, #ff0000, #aa0000); }
+        
+        .hp-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            font-size: 0.9rem;
+        }
+        
+        .meters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .meter {
+            background: #333;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .meter-fill {
+            height: 100%;
+            transition: all 0.3s;
+        }
+        
+        .meter.chaos .meter-fill { background: linear-gradient(90deg, #ff00ff, #ff0066); }
+        .meter.clarity .meter-fill { background: linear-gradient(90deg, #00ffff, #0066ff); }
+        
+        .meter-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+        }
+        
+        /* Battle Log */
+        .battle-log-container {
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #444;
+            border-radius: 10px;
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .battle-log {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            border-radius: 8px;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .log-entry.player { background: rgba(0, 255, 0, 0.1); border-left: 3px solid #0f0; }
+        .log-entry.enemy { background: rgba(255, 0, 0, 0.1); border-left: 3px solid #f00; }
+        .log-entry.event { background: rgba(255, 255, 0, 0.1); border-left: 3px solid #ff0; }
+        .log-entry.narrator { background: rgba(0, 255, 255, 0.1); border-left: 3px solid #0ff; font-style: italic; }
+        .log-entry.chaos { background: rgba(255, 0, 255, 0.2); border-left: 3px solid #f0f; }
+        .log-entry.clarity { background: rgba(0, 255, 255, 0.2); border-left: 3px solid #0ff; }
+        
+        .timestamp {
+            color: #666;
+            font-size: 0.7rem;
+            margin-right: 8px;
+        }
+        
+        /* Move Buttons */
+        .moves-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .move-btn {
+            background: linear-gradient(145deg, #4a4a6a, #2a2a4a);
+            border: 2px solid #666;
+            border-radius: 10px;
+            padding: 15px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .move-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            border-color: #ff00ff;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+        
+        .move-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .move-name {
+            font-family: 'Bangers', cursive;
+            font-size: 1.2rem;
+            color: #ff6b6b;
+            margin-bottom: 5px;
+        }
+        
+        .move-desc {
+            font-size: 0.75rem;
+            color: #aaa;
+            line-height: 1.3;
+        }
+        
+        .move-tags {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.5);
+            text-transform: uppercase;
+        }
+        
+        .tag.stealth { background: #4a0080; color: #d0f; }
+        .tag.speed { background: #008040; color: #0f8; }
+        .tag.sloppy { background: #804000; color: #fa0; }
+        .tag.projectile { background: #004080; color: #08f; }
+        .tag.chaos { background: #800040; color: #f08; }
+        .tag.special { background: #808000; color: #ff0; }
+        
+        /* Special Move */
+        .move-btn.special-move {
+            grid-column: span 2;
+            background: linear-gradient(145deg, #6a4a2a, #4a2a0a);
+            border-color: #ff0;
+        }
+        
+        .move-btn.special-move .move-name {
+            color: #ff0;
+        }
+        
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: linear-gradient(145deg, #6a6a8a, #4a4a6a);
+            border: 2px solid #888;
+            border-radius: 10px;
+            padding: 12px 30px;
+            color: #fff;
+            cursor: pointer;
+            font-family: 'Bangers', cursive;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            border-color: #fff;
+        }
+        
+        .btn.primary {
+            background: linear-gradient(145deg, #8a4a6a, #6a2a4a);
+            border-color: #ff6b6b;
+        }
+        
+        .btn.success {
+            background: linear-gradient(145deg, #4a8a4a, #2a6a2a);
+            border-color: #6bff6b;
+        }
+        
+        /* Event Modal */
+        .event-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .event-content {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
+            border: 3px solid #ff00ff;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            text-align: center;
+            animation: popIn 0.3s;
+        }
+        
+        @keyframes popIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        
+        .event-title {
+            font-family: 'Creepster', cursive;
+            font-size: 2rem;
+            color: #ff00ff;
+            margin-bottom: 15px;
+        }
+        
+        .event-desc {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .event-effect {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        /* Victory/Defeat Screen */
+        .end-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .end-content {
+            text-align: center;
+            animation: victoryPulse 2s infinite;
+        }
+        
+        @keyframes victoryPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .end-title {
+            font-family: 'Creepster', cursive;
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        
+        .end-title.victory { color: #0f0; text-shadow: 0 0 30px #0f0; }
+        .end-title.defeat { color: #f00; text-shadow: 0 0 30px #f00; }
+        .end-title.clarity-win { color: #0ff; text-shadow: 0 0 30px #0ff; }
+        
+        .end-reason {
+            font-size: 1.3rem;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        
+        /* Share Section */
+        .share-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-width: 600px;
+        }
+        
+        .share-text {
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .battle-arena { grid-template-columns: 1fr; gap: 20px; }
+            .moves-container { grid-template-columns: 1fr; }
+            .move-btn.special-move { grid-column: span 1; }
+        }
+        
+        /* Animations for damage */
+        .damage-popup {
+            position: absolute;
+            font-family: 'Bangers', cursive;
+            font-size: 2rem;
+            color: #ff0000;
+            text-shadow: 2px 2px #000;
+            animation: damageFloat 1s forwards;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        @keyframes damageFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+        
+        .heal-popup {
+            color: #00ff00;
+        }
+        
+        .chaos-popup {
+            color: #ff00ff;
+        }
+        
+        .clarity-popup {
+            color: #00ffff;
+        }
+        
+        /* Shake animation */
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        /* Intro text */
+        .intro-text {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .turn-indicator {
+            text-align: center;
+            font-family: 'Bangers', cursive;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #ff0;
+            text-shadow: 0 0 10px #ff0;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="chaos-overlay"></div>
+    
+    <div class="container">
+        <h1>CLARITY CLASH: CHAOS ARENA</h1>
+        <p class="subtitle">"Where bad decisions make great stories"</p>
+        
+        <!-- Character Select Screen -->
+        <div id="characterSelect" class="character-select-screen">
+            <p class="intro-text">Choose your champion... if you dare. Each brings their own flavor of poor judgment to the arena.</p>
+            <div class="character-select" id="characterGrid"></div>
+            <div class="controls">
+                <button class="btn primary" onclick="startGame()" id="startBtn" disabled>ENTER THE ARENA</button>
+            </div>
+        </div>
+        
+        <!-- Battle Screen -->
+        <div id="battleScreen" class="battle-screen">
+            <div class="turn-indicator" id="turnIndicator">YOUR TURN</div>
+            
+            <div class="battle-arena">
+                <div class="fighter player" id="playerFighter">
+                    <div class="fighter-header">
+                        <span class="fighter-name" id="playerName">You</span>
+                        <span class="fighter-class" id="playerClass">Class</span>
+                    </div>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar player" id="playerHpBar" style="width: 100%"></div>
+                        <span class="hp-text" id="playerHpText">100/100 HP</span>
+                    </div>
+                    <div class="meters">
+                        <div class="meter chaos">
+                            <div class="meter-fill" id="playerChaosBar" style="width: 0%"></div>
+                            <span class="meter-label">CHAOS</span>
+                        </div>
+                        <div class="meter clarity">
+                            <div class="meter-fill" id="playerClarityBar" style="width: 0%"></div>
+                            <span class="meter-label">CLARITY</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="fighter enemy" id="enemyFighter">
+                    <div class="fighter-header">
+                        <span class="fighter-name" id="enemyName">Enemy</span>
+                        <span class="fighter-class" id="enemyClass">Class</span>
+                    </div>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar enemy" id="enemyHpBar" style="width: 100%"></div>
+                        <span class="hp-text" id="enemyHpText">100/100 HP</span>
+                    </div>
+                    <div class="meters">
+                        <div class="meter chaos">
+                            <div class="meter-fill" id="enemyChaosBar" style="width: 0%"></div>
+                            <span class="meter-label">CHAOS</span>
+                        </div>
+                        <div class="meter clarity">
+                            <div class="meter-fill" id="enemyClarityBar" style="width: 0%"></div>
+                            <span class="meter-label">CLARITY</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="battle-log-container">
+                <div class="battle-log" id="battleLog"></div>
+            </div>
+            
+            <div class="moves-container" id="movesContainer"></div>
+            
+            <div class="controls">
+                <button class="btn" onclick="copyBattleLog()">📋 COPY BATTLE LOG</button>
+                <button class="btn" onclick="surrender()">🏳️ SURRENDER</button>
+            </div>
+        </div>
+        
+        <!-- Event Modal -->
+        <div class="event-modal" id="eventModal">
+            <div class="event-content">
+                <div class="event-title" id="eventTitle">EVENT</div>
+                <div class="event-desc" id="eventDesc">Something happened...</div>
+                <div class="event-effect" id="eventEffect">Effect description</div>
+                <button class="btn primary" onclick="closeEvent()">ACCEPT YOUR FATE</button>
+            </div>
+        </div>
+        
+        <!-- End Screen -->
+        <div class="end-screen" id="endScreen">
+            <div class="end-content">
+                <div class="end-title" id="endTitle">VICTORY</div>
+                <div class="end-reason" id="endReason">You won!</div>
+                <div class="share-section">
+                    <div class="share-text" id="shareText"></div>
+                </div>
+                <div class="controls">
+                    <button class="btn success" onclick="copyShareText()">📋 COPY TO SHARE</button>
+                    <button class="btn primary" onclick="location.reload()">PLAY AGAIN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Data
+        const characters = [
+            {
+                id: 'crack_fairy',
+                name: 'Crack Fairy',
+                desc: 'A tiny menace with wings made of broken promises. Moves at 3x human speed, makes terrible choices at 10x.',
+                hp: 70, damage: 15, defense: 3, accuracy: 85, evasion: 40,
+                moves: [
+                    { name: 'Flutter Strike', desc: 'Hit and run before they know what happened', tags: ['speed', 'stealth'], power: 1.2 },
+                    { name: 'Paranoid Rant', desc: 'Confuse enemy with rapid-fire conspiracy theories', tags: ['chaos', 'sloppy'], power: 0.8, effect: 'confuse' },
+                    { name: 'Sugar Crash', desc: 'Sacrifice HP for massive damage', tags: ['sloppy', 'speed'], power: 2.0, selfDamage: 10 },
+                    { name: 'Borrow Your Stuff', desc: 'Steal enemy buffs and dignity', tags: ['stealth', 'chaos'], power: 0.5, steal: true }
+                ]
+            },
+            {
+                id: 'meth_wizard',
+                name: 'Meth Wizard',
+                desc: 'Casts spells that may or may not exist. Hasn\'t slept since Tuesday. The crystal is both his power source and his personality.',
+                hp: 80, damage: 20, defense: 2, accuracy: 70, evasion: 25,
+                moves: [
+                    { name: 'Crystal Ball Lightning', desc: 'Unleash unpredictable arcane energy', tags: ['projectile', 'chaos'], power: 1.5, variance: true },
+                    { name: 'Tweak Time', desc: 'Move so fast you steal a turn', tags: ['speed', 'speed'], power: 0.6, extraTurn: true },
+                    { name: 'Shadow People Summon', desc: 'Call entities that may not be real', tags: ['chaos', 'stealth'], power: 1.0, summon: true },
+                    { name: 'Lab Explosion', desc: 'Area damage to everyone including yourself', tags: ['sloppy', 'projectile'], power: 1.8, aoe: true, selfDamage: 15 }
+                ]
+            },
+            {
+                id: 'coke_bard',
+                name: 'Coke Bard',
+                desc: 'Sings songs about how great he is. Believes every word. Will talk your ear off then sell it back to you.',
+                hp: 90, damage: 12, defense: 5, accuracy: 90, evasion: 20,
+                moves: [
+                    { name: 'Ego Boost Anthem', desc: 'Buff yourself while annoying enemy', tags: ['chaos', 'speed'], power: 0.4, buff: 'damage' },
+                    { name: 'Cutting Lines', desc: 'Sharp wit (and razor) deal damage', tags: ['stealth', 'sloppy'], power: 1.3 },
+                    { name: 'Endless Story', desc: 'Bore enemy into lowering defense', tags: ['sloppy', 'chaos'], power: 0.6, debuff: 'defense' },
+                    { name: 'Afterparty Meltdown', desc: 'Emotional damage from 3am texts', tags: ['chaos', 'projectile'], power: 1.6, clarityDrain: true }
+                ]
+            },
+            {
+                id: 'drunken_dwarf',
+                name: 'Drunken Dwarf',
+                desc: 'Iron liver, iron will, iron stomach. Can\'t walk straight but fights like a legend. Smells like a brewery and victory.',
+                hp: 120, damage: 18, defense: 8, accuracy: 60, evasion: 15,
+                moves: [
+                    { name: 'Whiskey Breath', desc: 'Toxic fumes damage and confuse', tags: ['sloppy', 'chaos'], power: 1.0, poison: true },
+                    { name: 'Bar Stool Beatdown', desc: 'Improvised weaponry at its finest', tags: ['sloppy', 'projectile'], power: 1.4 },
+                    { name: 'Liquid Courage', desc: 'Drink to heal and increase chaos', tags: ['sloppy', 'sloppy'], power: 0, heal: 25, chaosGain: 15 },
+                    { name: 'Drunken Master Stumble', desc: 'Accidentally dodge and counter', tags: ['speed', 'stealth'], power: 1.0, counter: true }
+                ]
+            },
+            {
+                id: 'benzo_elf',
+                name: 'Benzo Elf',
+                desc: 'Eternal calm in a 4-foot package. Moves slowly, hits softly, remembers nothing. The chillest warrior.',
+                hp: 85, damage: 10, defense: 6, accuracy: 95, evasion: 10,
+                moves: [
+                    { name: 'Existential Calm', desc: 'Reduce chaos for both fighters', tags: ['clarity', 'clarity'], power: 0, clarityHeal: 20, chaosReduce: true },
+                    { name: 'Memory Erase', desc: 'Enemy forgets their last move', tags: ['stealth', 'chaos'], power: 0.5, amnesia: true },
+                    { name: 'Nap Attack', desc: 'Sleep to restore HP, vulnerable while napping', tags: ['sloppy', 'stealth'], power: 0, sleepHeal: 40, vulnerable: true },
+                    { name: 'Who Cares Punch', desc: 'Apathetic but surprisingly accurate strike', tags: ['speed', 'clarity'], power: 1.1, ignoreDefense: true }
+                ]
+            },
+            {
+                id: 'heroin_gnome',
+                name: 'Heroin Gnome',
+                desc: 'Small, sneaky, and surprisingly durable. Lives in a garden of bad choices. Steals your lawn ornaments AND your will to fight.',
+                hp: 75, damage: 14, defense: 4, accuracy: 80, evasion: 35,
+                moves: [
+                    { name: 'Garden Trowel Shank', desc: 'Stealthy stab from the bushes', tags: ['stealth', 'stealth'], power: 1.6, critBonus: true },
+                    { name: 'Nod Off', desc: 'Become unhittable but confused', tags: ['stealth', 'sloppy'], power: 0, dodgeBoost: true, confused: true },
+                    { name: 'Steal Lawn Ornaments', desc: 'Throw flamingos and gnomes', tags: ['projectile', 'chaos'], power: 1.2, multiHit: true },
+                    { name: 'Warm Blanket Embrace', desc: 'Comfort enemy into submission', tags: ['clarity', 'stealth'], power: 0.3, charm: true }
+                ]
+            },
+            {
+                id: 'ass_goblin',
+                name: 'Ass Goblin',
+                desc: 'Nobody knows where they came from. Nobody wants to know. Strikes from behind, literally and figuratively.',
+                hp: 95, damage: 22, defense: 3, accuracy: 75, evasion: 30,
+                moves: [
+                    { name: 'Sneak Attack (From Behind)', desc: 'Strike where the sun don\'t shine', tags: ['stealth', 'stealth'], power: 1.8, backstab: true },
+                    { name: 'Fart Cloud', desc: 'Chemical warfare, goblin style', tags: ['sloppy', 'chaos'], power: 1.0, poison: true, aoe: true },
+                    { name: 'Goblin Screech', desc: 'Deafening wail damages and confuses', tags: ['chaos', 'projectile'], power: 1.1, stun: true },
+                    { name: 'Loot Drop', desc: 'Find random item and throw it', tags: ['chaos', 'projectile'], power: 1.4, randomItem: true }
+                ]
+            }
+        ];
+        
+        // Special shared move
+        const sharedMove = {
+            name: 'Let Me Hold 5 Dollars',
+            desc: 'Beg for money. Might get healed, might get punched, might just feel shame',
+            tags: ['sloppy', 'chaos', 'special'],
+            power: 0,
+            special: 'beg'
+        };
+        
+        // Random events
+        const randomEvents = [
+            { name: 'Found a Rock', desc: 'You found a cool rock. It\'s not special, but it\'s YOUR rock now.', effect: 'chaos', value: 10, message: 'Chaos increases from rock ownership' },
+            { name: 'Phone Buzzed', desc: 'It\'s a spam call. You answered anyway. Lost focus.', effect: 'clarity', value: -10, message: 'Clarity decreases from distraction' },
+            { name: 'Sudden Confidence', desc: 'You\'re pretty sure you can fly. You cannot.', effect: 'chaos', value: 15, message: 'Chaos spikes from false confidence' },
+            { name: 'Existential Thought', desc: 'Why are we here? Just to suffer?', effect: 'clarity', value: 15, message: 'Clarity increases through philosophy' },
+            { name: 'Knocking at the Door', desc: 'Nobody\'s there. Paranoia sets in.', effect: 'chaos', value: 20, message: 'Chaos skyrockets from paranoia' },
+            { name: 'Weird Bug', desc: 'A bug crawled on you. You made eye contact.', effect: 'chaos', value: 5, message: 'Slight chaos from bug encounter' },
+            { name: 'Deja Vu', desc: 'You\'ve seen this before. Or have you?', effect: 'clarity', value: 10, message: 'Clarity from temporal realization' },
+            { name: 'Snack Break', desc: 'Found a half-eaten sandwich. Choices were made.', effect: 'heal', value: 15, message: 'HP restored by questionable sandwich' },
+            { name: 'Bad Vibes', desc: 'The energy is off. Way off.', effect: 'chaos', value: 25, message: 'Heavy chaos from bad vibes' },
+            { name: 'Moment of Peace', desc: 'Everything is quiet. Too quiet.', effect: 'clarity', value: 20, message: 'Clarity from rare tranquility' }
+        ];
+        
+        // Narrator commentary
+        const narratorLines = [
+            "That did not go how anyone planned.",
+            "Confidence was high. Accuracy was not.",
+            "The situation has worsened creatively.",
+            "Everyone saw that coming except you.",
+            "Physics took a holiday for that one.",
+            "The audience is visibly concerned.",
+            "That was a choice. Not a good one, but a choice.",
+            "Even the game engine is confused.",
+            "Please consult a doctor after this match.",
+            "The simulation is becoming self-aware and disappointed.",
+            "Dice giveth and dice taketh away.",
+            "That move was illegal in 12 states.",
+            "The gods of RNG are fickle today.",
+            "Please never do that again.",
+            "Achievement unlocked: Questionable Decision",
+            "The tutorial did not cover this.",
+            "Even your opponent feels bad for you.",
+            "That was either brilliant or stupid. Time will tell.",
+            "The commentator has left the building.",
+            "We're all just making this up as we go."
+        ];
+        
+        // Game State
+        let player = null;
+        let enemy = null;
+        let turn = 'player';
+        let battleLog = [];
+        let gameActive = false;
+        let moveHistory = [];
+        
+        // Initialize
+        function init() {
+            renderCharacterSelect();
+        }
+        
+        function renderCharacterSelect() {
+            const grid = document.getElementById('characterGrid');
+            grid.innerHTML = characters.map(char => `
+                <div class="character-card" onclick="selectCharacter('${char.id}')" id="card-${char.id}">
+                    <div class="character-name">${char.name}</div>
+                    <div class="character-desc">${char.desc}</div>
+                    <div class="character-stats">
+                        <div class="stat"><span class="stat-label">HP</span><span class="stat-value">${char.hp}</span></div>
+                        <div class="stat"><span class="stat-label">DMG</span><span class="stat-value">${char.damage}</span></div>
+                        <div class="stat"><span class="stat-label">DEF</span><span class="stat-value">${char.defense}</span></div>
+                        <div class="stat"><span class="stat-label">ACC</span><span class="stat-value">${char.accuracy}%</span></div>
+                        <div class="stat"><span class="stat-label">EVA</span><span class="stat-value">${char.evasion}%</span></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        let selectedChar = null;
+        
+        function selectCharacter(id) {
+            document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`card-${id}`).classList.add('selected');
+            selectedChar = characters.find(c => c.id === id);
+            document.getElementById('startBtn').disabled = false;
+        }
+        
+        function startGame() {
+            if (!selectedChar) return;
+            
+            // Initialize player
+            player = {
+                ...selectedChar,
+                currentHp: selectedChar.hp,
+                chaos: 0,
+                clarity: 0,
+                buffs: [],
+                debuffs: []
+            };
+            
+            // Initialize enemy (random different character)
+            const enemyOptions = characters.filter(c => c.id !== selectedChar.id);
+            const enemyTemplate = enemyOptions[Math.floor(Math.random() * enemyOptions.length)];
+            enemy = {
+                ...enemyTemplate,
+                currentHp: enemyTemplate.hp,
+                chaos: 0,
+                clarity: 0,
+                buffs: [],
+                debuffs: []
+            };
+            
+            // Switch screens
+            document.getElementById('characterSelect').style.display = 'none';
+            document.getElementById('battleScreen').style.display = 'block';
+
+// New function to handle button states properly
+function updateMoveButtons() {
+    const buttons = document.querySelectorAll('.move-btn');
+    buttons.forEach((btn, index) => {
+        if (!gameActive || turn !== 'player' || processingTurn) {
+            btn.disabled = true;
+        } else {
+            btn.disabled = false;
+        }
+    });
+}
+
+// In startGame(), now calls:
+updateMoveButtons(); // Enable buttons immediately
+
+// In useMove(), sets:
+processingTurn = true; // Prevent clicks during execution
+updateMoveButtons();
+
+// In enemyTurn(), properly resets:
+processingTurn = false;
+turn = 'player';
+updateUI(); // This calls updateMoveButtons()
+
+            
+            // Setup UI
+            document.getElementById('playerName').textContent = player.name;
+            document.getElementById('playerClass').textContent = player.name;
+            document.getElementById('enemyName').textContent = enemy.name;
+            document.getElementById('enemyClass').textContent = enemy.name;
+            
+            renderMoves();
+            updateUI();
+            addLogEntry('narrator', 'Welcome to the Chaos Arena! May the least incompetent win!');
+            addLogEntry('event', `A wild ${enemy.name} appears! They look... unstable.`);
+            
+            gameActive = true;
+            
+            // Check for opening event
+            if (Math.random() < 0.3) triggerRandomEvent();
+        }
+        
+        function renderMoves() {
+            const container = document.getElementById('movesContainer');
+            const allMoves = [...player.moves, sharedMove];
+            
+            container.innerHTML = allMoves.map((move, index) => `
+                <button class="move-btn ${move.special ? 'special-move' : ''}" onclick="useMove(${index})" id="move-${index}">
+                    <div class="move-name">${move.name}</div>
+                    <div class="move-desc">${move.desc}</div>
+                    <div class="move-tags">
+                        ${move.tags.map(tag => `<span class="tag ${tag}">${tag}</span>`).join('')}
+                    </div>
+                </button>
+            `).join('');
+        }
+        
+        function useMove(moveIndex) {
+            if (!gameActive || turn !== 'player') return;
+            
+            const moves = [...player.moves, sharedMove];
+            const move = moves[moveIndex];
+            
+            executeMove(player, enemy, move, true);
+            
+            // Store move for history
+            moveHistory.push({ turn: battleLog.length, actor: player.name, move: move.name });
+            
+            // Check win conditions
+            if (checkWinConditions()) return;
+            
+            // Switch turn
+            turn = 'enemy';
+            updateUI();
+            
+            // Enemy turn after delay
+            setTimeout(enemyTurn, 1500);
+        }
+        
+        function enemyTurn() {
+            if (!gameActive) return;
+            
+            // AI selects random move
+            const moves = [...enemy.moves, sharedMove];
+            const move = moves[Math.floor(Math.random() * moves.length)];
+            
+            executeMove(enemy, player, move, false);
+            
+            moveHistory.push({ turn: battleLog.length, actor: enemy.name, move: move.name });
+            
+            if (checkWinConditions()) return;
+            
+            // Random event check after enemy turn
+            if (Math.random() < 0.25) {
+                setTimeout(() => triggerRandomEvent(), 1000);
+            } else {
+                turn = 'player';
+                updateUI();
+            }
+        }
+        
+        function executeMove(attacker, defender, move, isPlayer) {
+            const attackerName = isPlayer ? 'You' : attacker.name;
+            const defenderName = isPlayer ? enemy.name : 'You';
+            
+            // Calculate hit chance based on accuracy, evasion, and chaos/clarity
+            let hitChance = attacker.accuracy - defender.evasion;
+            
+            // Chaos reduces accuracy, clarity increases it
+            hitChance -= attacker.chaos * 0.5;
+            hitChance += attacker.clarity * 0.3;
+            
+            // Tag interactions
+            let damageMod = 1;
+            let message = '';
+            
+            // Speed vs sloppy interaction
+            if (move.tags.includes('speed') && defender.debuffs.includes('sloppy')) {
+                damageMod *= 1.5;
+                message = ' (Speed vs Sloppy = CRITICAL!)';
+            }
+            
+            // Stealth vs high evasion
+            if (move.tags.includes('stealth') && defender.evasion > 30) {
+                hitChance += 20;
+                message += ' (Stealth bypasses evasion!)';
+            }
+            
+            // Projectile vs speed
+            if (move.tags.includes('projectile') && defender.buffs.includes('speed')) {
+                hitChance -= 15;
+                message += ' (Fast target hard to hit!)';
+            }
+            
+            // Check for miss
+            const roll = Math.random() * 100;
+            let hit = roll <= hitChance;
+            
+            // Chaos can cause random misses or hits
+            if (attacker.chaos > 50 && Math.random() < 0.2) {
+                hit = !hit; // Chaos flip
+                message += ' (CHAOS FLIP!)';
+            }
+            
+            addLogEntry(isPlayer ? 'player' : 'enemy', `${attackerName} uses ${move.name}!`);
+            
+            if (!hit) {
+                addLogEntry('narrator', `${attackerName} missed!${message}`);
+                showFloatingText(isPlayer ? 'enemyFighter' : 'playerFighter', 'MISS!', 'damage-popup');
+                
+                // Miss increases chaos slightly
+                attacker.chaos = Math.min(100, attacker.chaos + 5);
+            } else {
+                // Calculate damage
+                let damage = attacker.damage * move.power * damageMod;
+                
+                // Variance for chaos moves
+                if (move.variance) {
+                    damage *= (0.5 + Math.random());
+                }
+                
+                // Critical hit chance
+                let critChance = 5 + (attacker.chaos * 0.1);
+                if (move.critBonus) critChance += 30;
+                
+                if (Math.random() * 100 < critChance) {
+                    damage *= 2;
+                    message += ' CRITICAL HIT!';
+                    addLogEntry('chaos', 'CRITICAL HIT! Maximum chaos achieved!');
+                }
+                
+                // Apply defense
+                let actualDefense = defender.defense;
+                if (move.ignoreDefense) actualDefense = 0;
+                damage = Math.max(1, damage - actualDefense);
+                damage = Math.floor(damage);
+                
+                // Deal damage
+                if (damage > 0) {
+                    defender.currentHp = Math.max(0, defender.currentHp - damage);
+                    showFloatingText(isPlayer ? 'enemyFighter' : 'playerFighter', `-${damage}`, 'damage-popup');
+                    addLogEntry(isPlayer ? 'player' : 'enemy', `${defenderName} takes ${damage} damage!${message}`);
+                    
+                    // Shake effect
+                    document.getElementById(isPlayer ? 'enemyFighter' : 'playerFighter').classList.add('shake');
+                    setTimeout(() => {
+                        document.getElementById(isPlayer ? 'enemyFighter' : 'playerFighter').classList.remove('shake');
+                    }, 500);
+                }
+                
+                // Special move effects
+                if (move.special === 'beg') {
+                    const begRoll = Math.random();
+                    if (begRoll < 0.33) {
+                        const heal = 20;
+                        attacker.currentHp = Math.min(attacker.hp, attacker.currentHp + heal);
+                        showFloatingText(isPlayer ? 'playerFighter' : 'enemyFighter', `+${heal}`, 'damage-popup heal-popup');
+                        addLogEntry('event', `${attackerName} got $5 and bought a hot dog! +${heal} HP`);
+                    } else if (begRoll < 0.66) {
+                        addLogEntry('narrator', `${attackerName} was ignored. The shame hurts.`);
+                        attacker.chaos += 10;
+                    } else {
+                        addLogEntry('narrator', `${attackerName} got punched instead of money!`);
+                        attacker.currentHp -= 5;
+                        showFloatingText(isPlayer ? 'playerFighter' : 'enemyFighter', '-5', 'damage-popup');
+                    }
+                }
+                
+                if (move.heal) {
+                    attacker.currentHp = Math.min(attacker.hp, attacker.currentHp + move.heal);
+                    showFloatingText(isPlayer ? 'playerFighter' : 'enemyFighter', `+${move.heal}`, 'damage-popup heal-popup');
+                }
+                
+                if (move.chaosGain) {
+                    attacker.chaos = Math.min(100, attacker.chaos + move.chaosGain);
+                }
+                
+                if (move.clarityHeal) {
+                    attacker.clarity = Math.min(100, attacker.clarity + move.clarityHeal);
+                    defender.clarity = Math.min(100, defender.clarity + move.clarityHeal * 0.5);
+                }
+                
+                if (move.sleepHeal) {
+                    attacker.currentHp = Math.min(attacker.hp, attacker.currentHp + move.sleepHeal);
+                    showFloatingText(isPlayer ? 'playerFighter' : 'enemyFighter', `+${move.sleepHeal}`, 'damage-popup heal-popup');
+                    attacker.buffs.push('sleeping');
+                }
+                
+                // Status effects
+                if (move.effect === 'confuse') {
+                    defender.debuffs.push('confused');
+                    addLogEntry('chaos', `${defenderName} is confused!`);
+                }
+                
+                if (move.poison) {
+                    defender.debuffs.push('poisoned');
+                    addLogEntry('chaos', `${defenderName} is poisoned!`);
+                }
+                
+                if (move.stun) {
+                    defender.debuffs.push('stunned');
+                    addLogEntry('event', `${defenderName} is stunned!`);
+                }
+            }
+            
+            // Apply self-damage
+            if (move.selfDamage) {
+                attacker.currentHp = Math.max(0, attacker.currentHp - move.selfDamage);
+                showFloatingText(isPlayer ? 'playerFighter' : 'enemyFighter', `-${move.selfDamage}`, 'damage-popup');
+                addLogEntry(isPlayer ? 'player' : 'enemy', `${attackerName} takes ${move.selfDamage} recoil damage!`);
+            }
+            
+            // Update chaos/clarity based on move tags
+            move.tags.forEach(tag => {
+                if (tag === 'chaos') attacker.chaos = Math.min(100, attacker.chaos + 10);
+                if (tag === 'clarity') attacker.clarity = Math.min(100, attacker.clarity + 10);
+                if (tag === 'sloppy') attacker.chaos = Math.min(100, attacker.chaos + 5);
+                if (tag === 'stealth') attacker.clarity = Math.min(100, attacker.clarity + 5);
+            });
+            
+            // Random narrator commentary (30% chance)
+            if (Math.random() < 0.3) {
+                const line = narratorLines[Math.floor(Math.random() * narratorLines.length)];
+                setTimeout(() => addLogEntry('narrator', line), 500);
+            }
+            
+            updateUI();
+        }
+        
+        function triggerRandomEvent() {
+            const event = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+            
+            document.getElementById('eventTitle').textContent = event.name;
+            document.getElementById('eventDesc').textContent = event.desc;
+            document.getElementById('eventEffect').textContent = event.message;
+            document.getElementById('eventModal').style.display = 'flex';
+            
+            // Apply event effects
+            if (event.effect === 'chaos') {
+                player.chaos = Math.min(100, player.chaos + event.value);
+                enemy.chaos = Math.min(100, enemy.chaos + event.value);
+            } else if (event.effect === 'clarity') {
+                player.clarity = Math.min(100, Math.max(0, player.clarity + event.value));
+                enemy.clarity = Math.min(100, Math.max(0, enemy.clarity + event.value));
+            } else if (event.effect === 'heal') {
+                player.currentHp = Math.min(player.hp, player.currentHp + event.value);
+                enemy.currentHp = Math.min(enemy.hp, enemy.currentHp + event.value);
+            }
+            
+            addLogEntry('event', `RANDOM EVENT: ${event.name} - ${event.message}`);
+            updateUI();
+        }
+        
+        function closeEvent() {
+            document.getElementById('eventModal').style.display = 'none';
+            if (turn === 'enemy') {
+                turn = 'player';
+                updateUI();
+            }
+        }
+        
+        function checkWinConditions() {
+            // HP win
+            if (enemy.currentHp <= 0) {
+                endGame('victory', 'You defeated ' + enemy.name + '! The arena weeps... tears of laughter.');
+                return true;
+            }
+            if (player.currentHp <= 0) {
+                endGame('defeat', enemy.name + ' defeated you! Embarrassing, honestly.');
+                return true;
+            }
+            
+            // Clarity win
+            if (player.clarity >= 100) {
+                endGame('clarity-win', 'You achieved MAXIMUM CLARITY! You\'ve transcended the chaos and won spiritually (and actually).');
+                return true;
+            }
+            if (enemy.clarity >= 100) {
+                endGame('defeat', enemy.name + ' achieved enlightenment! You lost to a calm opponent. How humiliating.');
+                return true;
+            }
+            
+            return false;
+        }
+        
+        function endGame(type, reason) {
+            gameActive = false;
+            document.getElementById('endScreen').style.display = 'flex';
+            document.getElementById('endTitle').className = 'end-title ' + type;
+            document.getElementById('endTitle').textContent = type === 'victory' ? 'VICTORY!' : type === 'clarity-win' ? 'ENLIGHTENMENT!' : 'DEFEAT!';
+            document.getElementById('endReason').textContent = reason;
+            
+            generateShareText();
+        }
+        
+        function generateShareText() {
+            const result = player.currentHp > 0 ? 'VICTORY' : 'DEFEAT';
+            const text = `🎮 CLARITY CLASH: CHAOS ARENA 🎮
+            
+${result}!
+${player.name} vs ${enemy.name}
+
+Battle Summary:
+${battleLog.slice(0, 10).map(e => e.text).join('\n')}
+
+${player.currentHp > 0 ? 'I survived the chaos!' : 'I was consumed by the chaos...'}
+
+Play Clarity Clash: Chaos Arena!
+#ClarityClash #ChaosArena #IndieGame`;
+            
+            document.getElementById('shareText').textContent = text;
+        }
+        
+        function copyBattleLog() {
+            const text = battleLog.map(e => `[${e.type.toUpperCase()}] ${e.text}`).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Battle log copied! Paste it somewhere safe (or unsafe, we don\'t judge).');
+            });
+        }
+        
+        function copyShareText() {
+            const text = document.getElementById('shareText').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Share text copied! Go viral or go home.');
+            });
+        }
+        
+        function surrender() {
+            if (confirm('Surrender? Really? Your ancestors are watching.')) {
+                endGame('defeat', 'You surrendered. The shame will follow you for generations.');
+            }
+        }
+        
+        function updateUI() {
+            // Update HP bars
+            const playerHpPercent = (player.currentHp / player.hp) * 100;
+            const enemyHpPercent = (enemy.currentHp / enemy.hp) * 100;
+            
+            document.getElementById('playerHpBar').style.width = playerHpPercent + '%';
+            document.getElementById('playerHpText').textContent = `${player.currentHp}/${player.hp} HP`;
+            document.getElementById('enemyHpBar').style.width = enemyHpPercent + '%';
+            document.getElementById('enemyHpText').textContent = `${enemy.currentHp}/${enemy.hp} HP`;
+            
+            // Update chaos/clarity bars
+            document.getElementById('playerChaosBar').style.width = player.chaos + '%';
+            document.getElementById('playerClarityBar').style.width = player.clarity + '%';
+            document.getElementById('enemyChaosBar').style.width = enemy.chaos + '%';
+            document.getElementById('enemyClarityBar').style.width = enemy.clarity + '%';
+            
+            // Update turn indicator
+            document.getElementById('turnIndicator').textContent = turn === 'player' ? 'YOUR TURN' : 'ENEMY TURN';
+            document.getElementById('turnIndicator').style.color = turn === 'player' ? '#0f0' : '#f00';
+            
+            // Enable/disable move buttons
+            document.querySelectorAll('.move-btn').forEach(btn => {
+                btn.disabled = turn !== 'player' || !gameActive;
+            });
+        }
+        
+        function addLogEntry(type, text) {
+            const entry = { type, text, time: new Date().toLocaleTimeString() };
+            battleLog.push(entry);
+            
+            const logContainer = document.getElementById('battleLog');
+            const entryDiv = document.createElement('div');
+            entryDiv.className = `log-entry ${type}`;
+            entryDiv.innerHTML = `<span class="timestamp">${entry.time}</span>${text}`;
+            logContainer.appendChild(entryDiv);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function showFloatingText(elementId, text, className) {
+            const element = document.getElementById(elementId);
+            const popup = document.createElement('div');
+            popup.className = className;
+            popup.textContent = text;
+            popup.style.left = '50%';
+            popup.style.top = '30%';
+            element.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+        
+        // Start
+        init();
+    </script>
+</body>
+</html>

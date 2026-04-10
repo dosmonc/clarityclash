@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clarity Clash: Chaos Arena</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#13131f;--surface2:#1a1a2e;--border:#2a2a3e;--text:#e0e0e8;--dim:#6a6a8a;--red:#ff4455;--orange:#ff8844;--yellow:#ffcc33;--green:#44dd66;--cyan:#44ddff;--blue:#4488ff;--purple:#aa66ff;--pink:#ff66aa}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+.game-container{max-width:800px;margin:0 auto;padding:12px}
+ 
+/* Title */
+.title{text-align:center;padding:20px 0}
+.title h1{font-size:2.8em;font-weight:900;background:linear-gradient(135deg,var(--red),var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1.1}
+.title .sub{color:var(--dim);font-size:1.1em;margin-top:4px;letter-spacing:6px;text-transform:uppercase}
+.title .tagline{color:var(--dim);font-size:0.8em;margin-top:8px;font-style:italic}
+ 
+/* Character Select */
+.char-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:12px 0}
+.char-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s}
+.char-card:hover{border-color:var(--purple);transform:translateY(-2px);box-shadow:0 8px 24px rgba(170,102,255,.15)}
+.char-card .char-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.char-card .char-emoji{font-size:2.2em}
+.char-card .char-name{font-weight:800;font-size:1.1em}
+.char-card .char-desc{font-size:.72em;color:var(--dim);font-style:italic;margin-bottom:12px;line-height:1.4}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:.75em;font-family:'Courier New',monospace}
+.stat-row{display:flex;justify-content:space-between}
+.stat-label{color:var(--dim)}
+.stat-hp{color:var(--green)}.stat-dmg{color:var(--red)}.stat-def{color:var(--blue)}.stat-acc{color:var(--yellow)}.stat-eva{color:var(--purple)}.stat-spd{color:var(--cyan)}
+.char-moves{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.char-moves span{font-size:.62em;background:var(--surface2);color:var(--dim);padding:2px 6px;border-radius:4px}
+ 
+/* Battle Screen */
+.battle-header{text-align:center;margin-bottom:8px}
+.battle-header h1{font-size:1.6em;font-weight:900;background:linear-gradient(135deg,var(--red),var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.turn-indicator{color:var(--dim);font-size:.8em;font-family:monospace}
+ 
+/* Health Bars */
+.hp-section{margin:6px 0}
+.hp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-size:.82em}
+.hp-name{font-weight:700;display:flex;align-items:center;gap:6px}
+.hp-numbers{font-family:monospace;color:var(--dim);font-size:.85em}
+.hp-bar-outer{height:18px;background:var(--surface2);border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+.hp-bar-inner{height:100%;border-radius:9px;transition:width .6s ease}
+.hp-green{background:linear-gradient(90deg,#22aa44,#44dd66)}.hp-yellow{background:linear-gradient(90deg,#cc8800,#ffcc33)}.hp-red{background:linear-gradient(90deg,#cc2233,#ff4455)}
+.hp-bar-enemy .hp-bar-inner{direction:rtl}
+ 
+/* Meters */
+.meters{display:flex;gap:12px;margin:8px 0}
+.meter{flex:1}
+.meter-header{display:flex;justify-content:space-between;font-size:.72em;font-weight:700;margin-bottom:2px}
+.meter-chaos .meter-header{color:var(--orange)}.meter-clarity .meter-header{color:var(--cyan)}
+.meter-bar{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.meter-fill-chaos{height:100%;background:linear-gradient(90deg,var(--red),var(--orange));border-radius:5px;transition:width .5s}
+.meter-fill-clarity{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:5px;transition:width .5s}
+.meter-label{font-size:.6em;color:var(--dim);text-align:center;margin-top:2px;font-style:italic}
+ 
+/* Status Effects */
+.status-effects{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0;min-height:20px}
+.status-pill{font-size:.6em;padding:2px 7px;border-radius:8px;font-weight:600;animation:fadeInPill .3s}
+@keyframes fadeInPill{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.status-buff{background:rgba(68,221,102,.15);color:var(--green);border:1px solid rgba(68,221,102,.3)}
+.status-debuff{background:rgba(255,68,85,.15);color:var(--red);border:1px solid rgba(255,68,85,.3)}
+.status-neutral{background:rgba(170,102,255,.15);color:var(--purple);border:1px solid rgba(170,102,255,.3)}
+ 
+/* Battle Log */
+.log-container{background:var(--surface);border:1px solid var(--border);border-radius:10px;height:240px;overflow-y:auto;padding:10px;margin:8px 0;scroll-behavior:smooth}
+.log-container::-webkit-scrollbar{width:6px}.log-container::-webkit-scrollbar-track{background:var(--surface)}.log-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.log-entry{font-family:'Courier New',monospace;font-size:.72em;line-height:1.6;animation:logSlide .3s ease}
+@keyframes logSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.log-move{color:var(--yellow)}.log-damage{color:var(--red)}.log-miss{color:var(--dim)}.log-event{color:var(--purple)}.log-commentary{color:var(--dim);font-style:italic}.log-system{color:var(--cyan);font-weight:700}.log-heal{color:var(--green)}.log-status{color:var(--pink)}.log-turn-sep{color:var(--border);user-select:none}
+ 
+/* Move Buttons */
+.moves-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.move-btn{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;transition:all .15s;color:var(--text)}
+.move-btn:hover:not(:disabled){border-color:var(--purple);background:var(--surface2);transform:translateY(-1px)}
+.move-btn:active:not(:disabled){transform:translateY(0)}
+.move-btn:disabled{opacity:.4;cursor:not-allowed}
+.move-btn .move-name{font-weight:700;font-size:.85em;margin-bottom:4px}
+.move-btn .move-desc{font-size:.6em;color:var(--dim);font-style:italic;line-height:1.3;margin-bottom:5px}
+.move-btn .move-tags{display:flex;gap:3px;flex-wrap:wrap}
+.move-btn .move-tags span{font-size:.58em;padding:1px 5px;border-radius:3px;font-weight:600}
+.tag-stealth{background:rgba(170,102,255,.2);color:var(--purple)}.tag-speed{background:rgba(255,204,51,.2);color:var(--yellow)}.tag-sloppy{background:rgba(255,68,85,.2);color:var(--red)}.tag-projectile{background:rgba(68,136,255,.2);color:var(--blue)}
+.tag-stat{background:var(--surface2);color:var(--dim)}
+.move-shared{grid-column:1/-1}
+ 
+/* Cooldown overlay */
+.move-btn.on-cooldown{position:relative}
+.move-btn.on-cooldown::after{content:attr(data-cd);position:absolute;top:4px;right:8px;font-size:.6em;color:var(--orange);font-weight:700}
+ 
+/* Game Over */
+.game-over{text-align:center;padding:24px;background:var(--surface);border:2px solid var(--border);border-radius:14px;margin:12px 0}
+.game-over .trophy{font-size:3em;margin-bottom:8px}
+.game-over h2{font-size:1.8em;font-weight:900;margin-bottom:6px}
+.game-over .go-sub{color:var(--dim);font-size:.85em;margin-bottom:4px}
+.game-over .go-stats{color:var(--dim);font-size:.72em;font-family:monospace;margin-bottom:16px}
+.game-over .go-flavor{color:var(--purple);font-size:.75em;font-style:italic;margin-bottom:16px}
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{padding:10px 20px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-weight:700;font-size:.9em;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--surface);transform:translateY(-1px)}
+.btn-primary{background:var(--purple);border-color:var(--purple);color:#fff}
+.btn-primary:hover{background:#9955ee}
+.btn-copy.copied{background:var(--green);border-color:var(--green);color:#000}
+ 
+/* Event Banner */
+.event-banner{background:linear-gradient(135deg,rgba(170,102,255,.1),rgba(255,68,85,.1));border:1px solid var(--purple);border-radius:10px;padding:10px 14px;margin:6px 0;animation:eventPop .4s ease}
+@keyframes eventPop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.event-banner .event-name{color:var(--purple);font-weight:800;font-size:.85em}.event-banner .event-desc{color:var(--dim);font-size:.7em;font-style:italic;margin-top:3px}
+ 
+/* Initiative Display */
+.initiative{text-align:center;font-size:.65em;color:var(--dim);margin:2px 0;font-family:monospace}
+.initiative .first{color:var(--cyan);font-weight:700}
+ 
+/* Responsive */
+@media(max-width:500px){.title h1{font-size:2em}.moves-grid{grid-template-columns:1fr}.char-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="game-container" id="app"></div>
+<script>
+// ============================================================
+// CLARITY CLASH: CHAOS ARENA - Complete Game Engine
+// ============================================================
+ 
+// === TAG INTERACTION MATRIX ===
+const TAG_MATRIX = {
+  'speed|sloppy':     { dmgMult: 1.5, accBonus: 10, note: 'Speed exploits the sloppy!' },
+  'speed|stealth':    { dmgMult: 1.0, accBonus: -10, note: 'Stealth slips past the speedster!' },
+  'speed|projectile': { dmgMult: 1.0, accBonus: 5, note: 'Speed closes the gap on the projectile!' },
+  'stealth|sloppy':   { dmgMult: 1.3, accBonus: 15, note: 'Stealth catches them fumbling!' },
+  'stealth|speed':    { dmgMult: 0.8, accBonus: -15, note: 'Too fast to ambush!' },
+  'stealth|projectile':{ dmgMult: 1.2, accBonus: -5, note: 'Hard to shoot what you cannot see!' },
+  'sloppy|stealth':   { dmgMult: 1.2, accBonus: 20, note: 'Chaotic flailing finds the hidden!' },
+  'sloppy|speed':     { dmgMult: 0.8, accBonus: -10, note: 'Too slow and messy!' },
+  'sloppy|projectile':{ dmgMult: 1.1, accBonus: 0, note: 'Sloppy deflects... somehow!' },
+  'projectile|stealth':{ dmgMult: 0.7, accBonus: -20, note: 'Can\'t shoot what you can\'t find!' },
+  'projectile|speed': { dmgMult: 1.0, accBonus: -5, note: 'Target too fast for projectile!' },
+  'projectile|sloppy':{ dmgMult: 1.4, accBonus: 15, note: 'Easy target! Projectile hits clean!' },
+};
+ 
+// === STATUS EFFECTS ===
+const STATUS_DEFS = {
+  burning:    { name:'Burning',     type:'debuff', statMod:{damage:-2}, dot:5, emoji:'🔥' },
+  focused:    { name:'Focused',     type:'buff',   statMod:{accuracy:15,damage:3}, dot:0, emoji:'🎯' },
+  dizzy:      { name:'Dizzy',       type:'debuff', statMod:{accuracy:-20,evasion:-10}, dot:0, emoji:'💫' },
+  shielded:   { name:'Shielded',    type:'buff',   statMod:{defense:5}, dot:0, emoji:'🛡' },
+  poisoned:   { name:'Poisoned',    type:'debuff', statMod:{}, dot:8, emoji:'🤢' },
+  enraged:    { name:'Enraged',     type:'buff',   statMod:{damage:6,defense:-3}, dot:0, emoji:'😤' },
+  hidden:     { name:'Hidden',      type:'buff',   statMod:{evasion:25}, dot:0, emoji:'👻' },
+  slowed:     { name:'Slowed',      type:'debuff', statMod:{evasion:-15}, dot:0, emoji:'🐌' },
+  inspired:   { name:'Inspired',    type:'buff',   statMod:{accuracy:10,damage:2}, dot:0, emoji:'✨' },
+  confused:   { name:'Confused',    type:'debuff', statMod:{accuracy:-15}, dot:0, emoji:'❓' },
+};
+ 
+// === CHARACTERS ===
+const CHARACTERS = [
+  {
+    name:'Crack Fairy', emoji:'🧚', color:'#ff66aa',
+    hp:85, damage:14, defense:4, accuracy:68, evasion:35, speed:90,
+    description:'Moves at the speed of poor decisions. Impossible to pin down. Will steal your lighter.',
+    passive:{ name:'Tweaker Reflexes', desc:'+10 evasion when HP below 40%' },
+    moves:[
+      { name:'Pixie Tweak', damage:18, accuracy:72, tags:['speed'], desc:'Vibrates at a frequency that causes structural damage.', chaos:8, clarity:-3, cooldown:0, statusApply:null },
+      { name:'Glitter Dash', damage:13, accuracy:85, tags:['speed','stealth'], desc:'Zooms past leaving a trail of suspicious glitter.', chaos:5, clarity:2, cooldown:0, statusApply:'hidden' },
+      { name:'Wing Slash', damage:24, accuracy:52, tags:['speed','sloppy'], desc:'Flails wings with reckless abandon. Somehow effective.', chaos:12, clarity:-5, cooldown:2, statusApply:null },
+      { name:'Shadow Flit', damage:16, accuracy:80, tags:['stealth'], desc:'Disappears. Reappears behind you. Asks for a cigarette.', chaos:3, clarity:5, cooldown:0, statusApply:null },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Meth Wizard', emoji:'🧙', color:'#44ddff',
+    hp:90, damage:20, defense:5, accuracy:50, evasion:15, speed:70,
+    description:'Has been awake for 9 days. Sees colors you can\'t imagine. Most of them are real.',
+    passive:{ name:'Tweaked Senses', desc:'+8 damage when Chaos above 60' },
+    moves:[
+      { name:'Crystal Blast', damage:28, accuracy:45, tags:['projectile','sloppy'], desc:'Hurls a crystalline projectile. Aim is... ambitious.', chaos:15, clarity:-8, cooldown:2, statusApply:'burning' },
+      { name:'Paranoia Beam', damage:20, accuracy:60, tags:['projectile'], desc:'A beam of pure suspicion. The government IS watching.', chaos:10, clarity:-5, cooldown:0, statusApply:null },
+      { name:'Tweaker Focus', damage:15, accuracy:90, tags:['speed'], desc:'Channels all that energy into one precise strike. Rare.', chaos:-5, clarity:15, cooldown:3, statusApply:'focused' },
+      { name:'Shadow People', damage:25, accuracy:40, tags:['sloppy','stealth'], desc:'Summons the shadow people. They might be real this time.', chaos:20, clarity:-10, cooldown:2, statusApply:'confused' },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Coke Bard', emoji:'🎸', color:'#ffcc33',
+    hp:95, damage:13, defense:6, accuracy:75, evasion:22, speed:80,
+    description:'Won\'t stop talking. Thinks every idea is genius. Has written 3 screenplays tonight.',
+    passive:{ name:'Main Character Energy', desc:'+5 clarity per turn passively' },
+    moves:[
+      { name:'Monologue Barrage', damage:16, accuracy:82, tags:['speed'], desc:'Talks so fast and so loud it deals actual damage.', chaos:5, clarity:6, cooldown:0, statusApply:null },
+      { name:'Inspire Delusion', damage:8, accuracy:92, tags:[], desc:'Convinces everyone things are going great. They\'re not.', chaos:-8, clarity:12, cooldown:0, statusApply:'inspired' },
+      { name:'Jaw Clench Slam', damage:22, accuracy:62, tags:['speed','sloppy'], desc:'Channels jaw tension into a devastating headbutt.', chaos:10, clarity:-3, cooldown:1, statusApply:null },
+      { name:'Bathroom Break', damage:5, accuracy:95, tags:['stealth'], desc:'Disappears to the bathroom. Comes back... different.', chaos:-3, clarity:8, cooldown:2, heal:12, statusApply:'focused' },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Drunken Dwarf', emoji:'🍺', color:'#ff8844',
+    hp:120, damage:16, defense:9, accuracy:45, evasion:10, speed:30,
+    description:'Built like a barrel. Smells like one too. Can\'t feel pain. Can\'t feel much of anything.',
+    passive:{ name:'Liquid Armor', desc:'Defense +3 when HP above 60%' },
+    moves:[
+      { name:'Barrel Roll', damage:20, accuracy:50, tags:['sloppy'], desc:'Rolls at the enemy. Direction is a suggestion.', chaos:10, clarity:-5, cooldown:0, statusApply:'dizzy' },
+      { name:'Bottle Smash', damage:26, accuracy:40, tags:['sloppy','projectile'], desc:'Throws a bottle. It might hit someone.', chaos:15, clarity:-8, cooldown:1, statusApply:'burning' },
+      { name:'Drunken Stumble', damage:14, accuracy:70, tags:['sloppy','speed'], desc:'Stumbles forward with surprising velocity.', chaos:8, clarity:0, cooldown:0, statusApply:null },
+      { name:'Liquid Courage', damage:0, accuracy:100, tags:[], desc:'Takes a swig. HP up. Standards down.', chaos:5, clarity:-3, cooldown:3, heal:22, statusApply:'enraged' },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Benzo Elf', emoji:'🧝', color:'#aa66ff',
+    hp:105, damage:11, defense:7, accuracy:72, evasion:30, speed:40,
+    description:'Extremely calm. Possibly too calm. Has forgotten the last 3 weeks.',
+    passive:{ name:'Tranquil Mind', desc:'Cannot be Confused; +5 clarity when hit' },
+    moves:[
+      { name:'Blackout Strike', damage:20, accuracy:60, tags:['stealth','sloppy'], desc:'Attacks but won\'t remember it. Neither will you.', chaos:12, clarity:-8, cooldown:1, statusApply:null },
+      { name:'Tranquil Dodge', damage:9, accuracy:92, tags:['stealth'], desc:'Sways out of the way with unsettling serenity.', chaos:-5, clarity:10, cooldown:0, statusApply:'hidden' },
+      { name:'Memory Wipe', damage:14, accuracy:78, tags:['stealth'], desc:'Makes the opponent forget what they were doing.', chaos:5, clarity:5, cooldown:2, statusApply:'confused' },
+      { name:'Slow Motion Punch', damage:18, accuracy:80, tags:['sloppy'], desc:'Throws a punch in slow motion. Still lands.', chaos:3, clarity:3, cooldown:0, statusApply:'slowed' },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Heroin Gnome', emoji:'🍄', color:'#44dd66',
+    hp:88, damage:22, defense:3, accuracy:55, evasion:14, speed:20,
+    description:'Nods off mid-combat. Hits HARD when awake. Awake is relative.',
+    passive:{ name:'Pain Immunity', desc:'Incoming damage reduced by 15% when HP below 30%' },
+    moves:[
+      { name:'Nod Off Slam', damage:32, accuracy:35, tags:['sloppy'], desc:'Falls asleep mid-swing. Gravitational devastation.', chaos:15, clarity:-10, cooldown:3, statusApply:null },
+      { name:'Dream Needle', damage:20, accuracy:65, tags:['stealth','projectile'], desc:'A needle from the dream realm. Metaphorical. Still hurts.', chaos:8, clarity:-3, cooldown:1, statusApply:'poisoned' },
+      { name:'Sleepy Shuffle', damage:13, accuracy:75, tags:['stealth','sloppy'], desc:'Shuffles toward you eyes closed. Terrifyingly sad.', chaos:5, clarity:2, cooldown:0, statusApply:null },
+      { name:'Narcan Panic', damage:10, accuracy:88, tags:['speed'], desc:'Suddenly awake. Panicking. Running. Fast.', chaos:12, clarity:8, cooldown:2, heal:10, statusApply:'enraged' },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Ass Goblin', emoji:'👺', color:'#ff4455',
+    hp:100, damage:15, defense:5, accuracy:65, evasion:28, speed:75,
+    description:'Nobody knows what this creature is. Nobody wants to. Feeds on chaos and discomfort.',
+    passive:{ name:'Chaos Feeder', desc:'+1 damage for every 10 Chaos' },
+    moves:[
+      { name:'Chaos Fart', damage:18, accuracy:78, tags:['projectile','sloppy'], desc:'An AOE attack that violates the Geneva Convention.', chaos:18, clarity:-10, cooldown:1, statusApply:'poisoned' },
+      { name:'Goblin Dash', damage:14, accuracy:82, tags:['speed'], desc:'Runs at you on all fours. Atrocious form. Effective.', chaos:8, clarity:0, cooldown:0, statusApply:null },
+      { name:'Unnerving Stare', damage:10, accuracy:95, tags:['stealth'], desc:'Just... stares. Deeply uncomfortable. Psychic damage.', chaos:10, clarity:5, cooldown:0, statusApply:'confused' },
+      { name:'Gremlin Mode', damage:26, accuracy:48, tags:['speed','sloppy'], desc:'Full gremlin. Bites, scratches, screams. A whole thing.', chaos:20, clarity:-8, cooldown:2, statusApply:'enraged' },
+      { name:'Let Me Hold $5', damage:0, accuracy:100, tags:[], desc:'Beg your opponent for $5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  }
+];
+ 
+ 
+// === RANDOM EVENTS ===
+const EVENTS = [
+  { name:'Found a Rock', desc:'You found a sharp rock. You feel powerful.', target:'player', effect:s=>{ s.player.tempDamage+=5; }, chaosD:2, clarityD:0, minChaos:0 },
+  { name:'Phone Buzzed', desc:'Checked your phone mid-fight. Spam text.', target:'player', effect:s=>{ s.player.tempAcc-=15; }, chaosD:5, clarityD:-5, minChaos:0 },
+  { name:'Sudden Confidence', desc:'Unearned confidence washes over you. Unstoppable.', target:'player', effect:s=>{ addStatus(s.player,'focused',2); }, chaosD:-5, clarityD:10, minChaos:0 },
+  { name:'Existential Thought', desc:'"What even IS damage?" The void stares back.', target:'player', effect:s=>{ s.player.tempDef-=4; }, chaosD:15, clarityD:-10, minChaos:10 },
+  { name:'Knocking at the Door', desc:'Both fighters freeze and pretend not to be home.', target:'both', effect:s=>{ s.player.tempEva+=12; s.enemy.tempEva+=12; }, chaosD:5, clarityD:0, minChaos:0 },
+  { name:'Pocket Lint Discovery', desc:'Lint in your pocket. Weirdly comforting. Healed.', target:'player', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+10); }, chaosD:0, clarityD:3, minChaos:0 },
+  { name:'Someone\'s Watching', desc:'You feel eyes. Dodge better out of pure anxiety.', target:'player', effect:s=>{ addStatus(s.player,'hidden',1); }, chaosD:8, clarityD:-3, minChaos:15 },
+  { name:'Floor Snack', desc:'Found something edible on the floor. No regrets.', target:'player', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+14); }, chaosD:8, clarityD:-2, minChaos:5 },
+  { name:'Wi-Fi Dropped', desc:'Reality feels less stable. Everyone panics.', target:'both', effect:s=>{ s.player.tempAcc-=10; s.enemy.tempAcc-=10; }, chaosD:20, clarityD:-8, minChaos:20 },
+  { name:'Motivational Poster', desc:'"Believe." You kinda do.', target:'player', effect:s=>{ addStatus(s.player,'inspired',2); }, chaosD:-5, clarityD:8, minChaos:0 },
+  { name:'Surprise Nap', desc:'Your opponent falls asleep standing up. Impressive.', target:'enemy', effect:s=>{ addStatus(s.enemy,'slowed',2); }, chaosD:5, clarityD:5, minChaos:10 },
+  { name:'Mysterious Fog', desc:'A fog from nowhere. Visibility is now a suggestion.', target:'both', effect:s=>{ s.player.tempAcc-=12; s.enemy.tempAcc-=12; s.player.tempEva+=8; s.enemy.tempEva+=8; }, chaosD:15, clarityD:-10, minChaos:25 },
+  { name:'Power Outlet', desc:'Found a working outlet. Phone charges. Morale restored.', target:'player', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+6); }, chaosD:-8, clarityD:12, minChaos:0 },
+  { name:'Bird Lands on Arena', desc:'A pigeon lands. Both fighters regard it with suspicion.', target:'both', effect:s=>{ s.player.tempAcc+=5; s.enemy.tempAcc+=5; }, chaosD:3, clarityD:3, minChaos:0 },
+  { name:'Someone Yells "WORLDSTAR"', desc:'The pressure is ON. Everyone fights harder.', target:'both', effect:s=>{ addStatus(s.player,'enraged',2); addStatus(s.enemy,'enraged',2); }, chaosD:12, clarityD:-5, minChaos:30 },
+  { name:'Deja Vu', desc:'Didn\'t this happen already? You SWEAR it did.', target:'both', effect:s=>{ addStatus(s.player,'confused',1); addStatus(s.enemy,'confused',1); }, chaosD:12, clarityD:-5, minChaos:20 },
+  { name:'Free Sample Lady', desc:'A free sample lady appears. Tiny cup of juice for everyone.', target:'both', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+8); s.enemy.hp=Math.min(s.enemy.maxHp,s.enemy.hp+8); }, chaosD:-3, clarityD:5, minChaos:0 },
+  { name:'Car Alarm Outside', desc:'BEEP BEEP BEEP. Impossible to focus.', target:'both', effect:s=>{ addStatus(s.player,'dizzy',1); addStatus(s.enemy,'dizzy',1); }, chaosD:10, clarityD:-8, minChaos:15 },
+];
+ 
+// === COMMENTARY ===
+const COMMENTARY = {
+  general: [
+    'That did not go how anyone planned.','Confidence was high. Accuracy was not.',
+    'The situation has worsened creatively.','Someone should really intervene here.',
+    'This is technically still a fight.','Both fighters briefly question their life choices.',
+    'The audience pretends not to see that.','A bird watches from a nearby tree. Also confused.',
+    'Somewhere, a therapist just got a new client.','This is fine. Everything is fine.',
+    'The referee has stopped making eye contact.','Historians will not record this moment.',
+    'A child in the crowd starts crying.','Even the chaos is embarrassed.',
+    'The ground itself seems uncomfortable.','Local authorities have been alerted.',
+    'Insurance does not cover this.','Witnesses will deny being here.',
+    'The vibe has shifted. Not in a good way.','Somehow, this is still legal.',
+    'The narrator requests hazard pay.','Both fighters smell terrible. This is canon.',
+    'Skill issue detected. On both sides.','The power of friendship is nowhere to be found.',
+    'A nearby squirrel has seen enough and leaves.',
+  ],
+  bigHit: [
+    'DEVASTATING. The crowd gasps. Someone drops their hot dog.',
+    'That one was FELT. In multiple dimensions.',
+    'Critical damage! The arena shakes!',
+    'The sound of that hit will echo in nightmares.',
+  ],
+  bigMiss: [
+    'Swung with the confidence of someone who has never missed. They have.',
+    'The attack goes so wide it nearly hits the audience.',
+    'Not even close. Like, geographically.',
+    'The wind generated by that miss was impressive though.',
+  ],
+  lowHp: [
+    'Hanging on by a thread. And vibes.',
+    'One more hit and it\'s over. Probably.',
+    'Health critical. Dignity already gone.',
+    'The screen is flashing red. Metaphorically and literally.',
+  ],
+  victory: [
+    'And THAT\'S the game! Someone call an ambulance. And a therapist.',
+    'VICTORY! The crowd goes... well, they\'re mostly confused.',
+    'Winner declared! The other one is just sort of lying there.',
+    'It\'s over. Finally. Sweet mercy, it\'s over.',
+  ],
+  clarityWin: [
+    'MAXIMUM CLARITY! They have transcended the chaos!',
+    'ENLIGHTENMENT ACHIEVED! They see through the madness!',
+    'CLARITY OVERLOAD! They have become the main character!',
+    'PURE LUCIDITY! The chaos bows before them!',
+  ],
+};
+ 
+function pick(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function clamp(v,lo,hi) { return Math.max(lo,Math.min(hi,v)); }
+function chance(pct) { return Math.random()*100 < pct; }
+ 
+ 
+// ============================================================
+// GAME ENGINE
+// ============================================================
+ 
+function createFighter(template) {
+  return {
+    ...template,
+    maxHp: template.hp,
+    tempDamage: 0, tempDef: 0, tempAcc: 0, tempEva: 0,
+    statuses: [],
+    cooldowns: template.moves.map(() => 0),
+    totalDmgDealt: 0, totalDmgTaken: 0, movesUsed: 0, hits: 0, misses: 0,
+  };
+}
+ 
+function getEffective(fighter, stat, chaos, clarity) {
+  let val = fighter[stat];
+  const mods = { damage:'tempDamage', defense:'tempDef', accuracy:'tempAcc', evasion:'tempEva' };
+  if (mods[stat]) val += fighter[mods[stat]];
+  // Apply status effects
+  for (const s of fighter.statuses) {
+    const def = STATUS_DEFS[s.id];
+    if (def && def.statMod[stat]) val += def.statMod[stat];
+  }
+  return val;
+}
+ 
+function addStatus(fighter, statusId, turns) {
+  if (!STATUS_DEFS[statusId]) return;
+  // Don't stack same status, refresh duration
+  const existing = fighter.statuses.find(s => s.id === statusId);
+  if (existing) { existing.turns = Math.max(existing.turns, turns); return; }
+  fighter.statuses.push({ id: statusId, turns });
+}
+ 
+function tickStatuses(fighter) {
+  const log = [];
+  const def_list = [];
+  for (const s of fighter.statuses) {
+    const def = STATUS_DEFS[s.id];
+    if (def && def.dot > 0) {
+      fighter.hp = Math.max(1, fighter.hp - def.dot);
+      log.push({ text:`  ${def.emoji} ${fighter.name} takes ${def.dot} ${def.name} damage!`, type:'status' });
+    }
+    s.turns--;
+    if (s.turns <= 0) {
+      log.push({ text:`  ${def.emoji} ${fighter.name}'s ${def.name} wore off.`, type:'status' });
+    }
+  }
+  fighter.statuses = fighter.statuses.filter(s => s.turns > 0);
+  return log;
+}
+ 
+function applyPassive(fighter, chaos, clarity) {
+  const n = fighter.name;
+  if (n === 'Crack Fairy' && fighter.hp < fighter.maxHp * 0.4) fighter.tempEva += 10;
+  if (n === 'Meth Wizard' && chaos > 60) fighter.tempDamage += 8;
+  if (n === 'Coke Bard') clarity = Math.min(100, clarity + 5);
+  if (n === 'Drunken Dwarf' && fighter.hp > fighter.maxHp * 0.6) fighter.tempDef += 3;
+  if (n === 'Heroin Gnome' && fighter.hp < fighter.maxHp * 0.3) fighter.tempDef += 4;
+  if (n === 'Ass Goblin') fighter.tempDamage += Math.floor(chaos / 10);
+  return clarity;
+}
+ 
+function resolveTagInteraction(atkTags, defTags) {
+  let best = null;
+  for (const at of atkTags) {
+    for (const dt of defTags) {
+      const key = at + '|' + dt;
+      if (TAG_MATRIX[key]) {
+        if (!best || TAG_MATRIX[key].dmgMult > best.dmgMult) best = { ...TAG_MATRIX[key], atkTag: at, defTag: dt };
+      }
+    }
+  }
+  return best;
+}
+ 
+function resolveAttack(attacker, defender, move, chaos, clarity, isPlayer) {
+  const log = [];
+  const notes = [];
+ 
+  // Effective stats
+  const atkDmg = getEffective(attacker, 'damage', chaos, clarity);
+  const atkAcc = getEffective(attacker, 'accuracy', chaos, clarity);
+  const defDef = getEffective(defender, 'defense', chaos, clarity);
+  const defEva = getEffective(defender, 'evasion', chaos, clarity);
+ 
+  // Tag interaction with defender's last-used move tags (stored on fighter)
+  const defTags = defender.lastMoveTags || [];
+  const tagResult = resolveTagInteraction(move.tags, defTags);
+  let dmgMult = 1.0, accBonus = 0;
+  if (tagResult) {
+    dmgMult = tagResult.dmgMult;
+    accBonus = tagResult.accBonus;
+    notes.push(tagResult.note);
+  }
+ 
+  // Chaos variance
+  if (chaos > 30) {
+    const variance = (chaos / 100) * 0.35;
+    const roll = (Math.random() - 0.5) * 2 * variance;
+    dmgMult += roll;
+    if (roll > 0.12) notes.push('Chaos fuels extra damage!');
+    if (roll < -0.12) notes.push('Chaos backfires!');
+  }
+ 
+  // Clarity bonus for player
+  const clarityAcc = isPlayer ? clarity * 0.2 : (100 - clarity) * 0.1;
+ 
+  // Final accuracy
+  const finalAcc = clamp(move.accuracy + (atkAcc - 50) + accBonus + clarityAcc - chaos * 0.08, 5, 97);
+  const finalEva = clamp(defEva, 0, 60);
+ 
+  const hitRoll = Math.random() * 100;
+  const evaRoll = Math.random() * 100;
+  const hit = hitRoll < finalAcc && evaRoll >= finalEva;
+ 
+  let totalDmg = 0;
+  if (hit && move.damage > 0) {
+    const base = move.damage + atkDmg;
+    const reduced = Math.max(1, base - defDef);
+    totalDmg = Math.max(1, Math.round(reduced * dmgMult));
+ 
+    // Sloppy self-damage
+    if (move.tags.includes('sloppy') && chance(12)) {
+      const selfDmg = Math.round(move.damage * 0.15);
+      attacker.hp = Math.max(1, attacker.hp - selfDmg);
+      notes.push(`Took ${selfDmg} self-damage from being sloppy!`);
+    }
+ 
+    // Passive: Benzo Elf can't be confused
+    if (defender.name === 'Benzo Elf' && move.statusApply === 'confused') {
+      notes.push('Benzo Elf is too calm to be confused!');
+    } else if (move.statusApply && hit) {
+      addStatus(defender, move.statusApply, 2);
+    }
+ 
+    // Passive: Heroin Gnome damage reduction
+    if (defender.name === 'Heroin Gnome' && defender.hp < defender.maxHp * 0.3) {
+      totalDmg = Math.max(1, Math.round(totalDmg * 0.85));
+      notes.push('Pain Immunity absorbs some damage!');
+    }
+ 
+    defender.hp = Math.max(0, defender.hp - totalDmg);
+    attacker.totalDmgDealt += totalDmg;
+    defender.totalDmgTaken += totalDmg;
+    attacker.hits++;
+  } else if (!hit) {
+    attacker.misses++;
+    // Apply status even on miss for some utility moves
+    if (move.damage === 0 && move.statusApply) {
+      if (defender.name === 'Benzo Elf' && move.statusApply === 'confused') {
+        notes.push('Benzo Elf shrugs it off!');
+      } else {
+        addStatus(defender, move.statusApply, 2);
+      }
+    }
+  }
+ 
+  // Heal
+  if (move.heal) {
+    attacker.hp = Math.min(attacker.maxHp, attacker.hp + move.heal);
+    notes.push(`Healed ${move.heal} HP!`);
+  }
+ 
+  attacker.movesUsed++;
+  attacker.lastMoveTags = move.tags;
+ 
+  return { hit, damage: totalDmg, notes, finalAcc: Math.round(finalAcc) };
+}
+ 
+function determineInitiative(player, enemy, chaos) {
+  const pSpd = getEffective(player, 'speed', chaos, 50) + (Math.random() * 20 - 10);
+  const eSpd = getEffective(enemy, 'speed', chaos, 50) + (Math.random() * 20 - 10);
+  if (chaos > 70 && chance(25)) return chance(50); // Pure chaos randomizes
+  return pSpd >= eSpd;
+}
+ 
+// ============================================================
+// GAME STATE
+// ============================================================
+ 
+let STATE = {
+  phase: 'select', // select | battle | gameover
+  player: null,
+  enemy: null,
+  chaos: 10,
+  clarity: 10,
+  turn: 0,
+  log: [],
+  logId: 0,
+  currentEvent: null,
+  playerGoesFirst: true,
+};
+ 
+function resetState() {
+  STATE = { phase:'select', player:null, enemy:null, chaos:10, clarity:10, turn:0, log:[], logId:0, currentEvent:null, playerGoesFirst:true };
+}
+ 
+function addLog(text, type) {
+  STATE.log.push({ id: ++STATE.logId, text, type });
+}
+ 
+ 
+// ============================================================
+// TURN EXECUTION
+// ============================================================
+ 
+function selectCharacter(charIndex) {
+  const template = CHARACTERS[charIndex];
+  const enemyPool = CHARACTERS.filter(c => c.name !== template.name);
+  const enemyTemplate = pick(enemyPool);
+ 
+  STATE.player = createFighter(template);
+  STATE.enemy = createFighter(enemyTemplate);
+  STATE.phase = 'battle';
+  STATE.turn = 1;
+  STATE.chaos = 10;
+  STATE.clarity = 10;
+  STATE.log = [];
+  STATE.logId = 0;
+ 
+  addLog(`${template.emoji} ${template.name} vs ${enemyTemplate.emoji} ${enemyTemplate.name}`, 'system');
+  addLog(`"${template.description}"`, 'commentary');
+  addLog(`vs.`, 'system');
+  addLog(`"${enemyTemplate.description}"`, 'commentary');
+  addLog(`────────── FIGHT! ──────────`, 'system');
+ 
+  render();
+}
+ 
+function executeTurn(moveIndex) {
+  if (STATE.phase !== 'battle') return;
+  const p = STATE.player, e = STATE.enemy;
+ 
+  // Reset temp stats each turn
+  p.tempDamage=0; p.tempDef=0; p.tempAcc=0; p.tempEva=0;
+  e.tempDamage=0; e.tempDef=0; e.tempAcc=0; e.tempEva=0;
+ 
+  // Apply passives
+  let newClarity = applyPassive(p, STATE.chaos, STATE.clarity);
+  applyPassive(e, STATE.chaos, STATE.clarity);
+  STATE.clarity = clamp(newClarity, 0, 100);
+ 
+  const playerMove = p.moves[moveIndex];
+  // AI picks move (weighted by chaos)
+  const availableEnemyMoves = e.moves.map((m,i) => ({ m, i })).filter(x => e.cooldowns[x.i] <= 0);
+  const aiChoice = availableEnemyMoves.length > 0 ? pick(availableEnemyMoves) : { m: e.moves[e.moves.length-1], i: e.moves.length-1 };
+  const enemyMove = aiChoice.m;
+ 
+  // Smart AI: prefer heal when low HP
+  let finalAiChoice = aiChoice;
+  if (e.hp < e.maxHp * 0.35) {
+    const healMove = availableEnemyMoves.find(x => x.m.heal && x.m.heal > 0);
+    if (healMove && chance(60)) finalAiChoice = healMove;
+  }
+  // Smart AI: prefer chaos moves when player clarity is high
+  if (STATE.clarity > 65) {
+    const chaosMove = availableEnemyMoves.find(x => x.m.chaos > 10);
+    if (chaosMove && chance(50)) finalAiChoice = chaosMove;
+  }
+  const finalEnemyMove = finalAiChoice.m;
+  const finalEnemyIdx = finalAiChoice.i;
+ 
+  // Set cooldowns
+  if (playerMove.cooldown > 0) p.cooldowns[moveIndex] = playerMove.cooldown + 1;
+  if (finalEnemyMove.cooldown > 0) e.cooldowns[finalEnemyIdx] = finalEnemyMove.cooldown + 1;
+ 
+  // Determine initiative
+  const playerFirst = determineInitiative(p, e, STATE.chaos);
+  STATE.playerGoesFirst = playerFirst;
+ 
+  addLog(``, 'turn-sep');
+  addLog(`══ Turn ${STATE.turn} ══${playerFirst ? '' : '  (' + e.name + ' acts first!)'}`, 'system');
+ 
+  const first  = playerFirst ? { f:p, m:playerMove,      d:e, isP:true } : { f:e, m:finalEnemyMove, d:p, isP:false };
+  const second = playerFirst ? { f:e, m:finalEnemyMove, d:p, isP:false } : { f:p, m:playerMove,      d:e, isP:true };
+ 
+  // === FIRST ATTACKER ===
+  executeAttack(first.f, first.d, first.m, first.isP);
+  if (checkWinConditions()) { render(); return; }
+ 
+  // === SECOND ATTACKER ===
+  executeAttack(second.f, second.d, second.m, second.isP);
+  if (checkWinConditions()) { render(); return; }
+ 
+  // === TICK STATUSES ===
+  const pStatusLog = tickStatuses(p);
+  const eStatusLog = tickStatuses(e);
+  for (const l of [...pStatusLog, ...eStatusLog]) addLog(l.text, l.type);
+  if (checkWinConditions()) { render(); return; }
+ 
+  // === RANDOM EVENT ===
+  const eventChance = 15 + STATE.chaos * 0.45;
+  if (chance(eventChance)) {
+    const eligible = EVENTS.filter(ev => STATE.chaos >= ev.minChaos);
+    if (eligible.length > 0) {
+      const event = pick(eligible);
+      addLog(`🎲 EVENT: ${event.name}`, 'event');
+      addLog(`  "${event.desc}"`, 'event');
+      event.effect(STATE);
+      STATE.chaos = clamp(STATE.chaos + event.chaosD, 0, 100);
+      STATE.clarity = clamp(STATE.clarity + event.clarityD, 0, 100);
+    }
+  }
+ 
+  if (checkWinConditions()) { render(); return; }
+ 
+  // === COMMENTARY ===
+  if (chance(35)) addLog(`📢 ${pick(COMMENTARY.general)}`, 'commentary');
+  if (p.hp < p.maxHp * 0.2 && chance(40)) addLog(`📢 ${pick(COMMENTARY.lowHp)}`, 'commentary');
+  if (e.hp < e.maxHp * 0.2 && chance(40)) addLog(`📢 ${pick(COMMENTARY.lowHp)}`, 'commentary');
+ 
+  // Tick cooldowns
+  p.cooldowns = p.cooldowns.map(c => Math.max(0, c - 1));
+  e.cooldowns = e.cooldowns.map(c => Math.max(0, c - 1));
+ 
+  STATE.turn++;
+  render();
+}
+ 
+function executeAttack(attacker, defender, move, isPlayer) {
+  const label = isPlayer ? attacker.emoji : attacker.emoji;
+  addLog(`${attacker.emoji} ${attacker.name} uses "${move.name}"`, 'move');
+  addLog(`  ↳ ${move.desc}`, 'commentary');
+ 
+  const result = resolveAttack(attacker, defender, move, STATE.chaos, STATE.clarity, isPlayer);
+ 
+  if (result.hit && move.damage > 0) {
+    addLog(`  💥 HIT! ${result.damage} damage to ${defender.name}! [${result.finalAcc}% acc]`, 'damage');
+    if (result.damage > 25) addLog(`  ${pick(COMMENTARY.bigHit)}`, 'commentary');
+  } else if (move.damage > 0) {
+    addLog(`  💨 MISS! ${defender.name} evades. [${result.finalAcc}% acc]`, 'miss');
+    if (result.finalAcc > 70) addLog(`  ${pick(COMMENTARY.bigMiss)}`, 'commentary');
+  }
+  if (move.heal) addLog(`  💚 ${attacker.name} heals ${move.heal} HP!`, 'heal');
+ 
+  for (const n of result.notes) addLog(`  → ${n}`, 'status');
+ 
+  // Update chaos/clarity
+  STATE.chaos = clamp(STATE.chaos + move.chaos, 0, 100);
+  STATE.clarity = clamp(STATE.clarity + (isPlayer ? move.clarity : -Math.abs(move.clarity) * 0.4), 0, 100);
+}
+ 
+function checkWinConditions() {
+  const p = STATE.player, e = STATE.enemy;
+  if (STATE.clarity >= 100) {
+    addLog(``, 'turn-sep');
+    addLog(`✨ ${pick(COMMENTARY.clarityWin)}`, 'system');
+    addLog(`🏆 ${p.name} wins by CLARITY TRANSCENDENCE!`, 'system');
+    STATE.phase = 'gameover';
+    STATE.winner = 'player';
+    STATE.winType = 'clarity';
+    return true;
+  }
+  if (e.hp <= 0) {
+    addLog(``, 'turn-sep');
+    addLog(`${pick(COMMENTARY.victory)}`, 'system');
+    addLog(`🏆 ${p.name} wins by KNOCKOUT!`, 'system');
+    STATE.phase = 'gameover';
+    STATE.winner = 'player';
+    STATE.winType = 'knockout';
+    return true;
+  }
+  if (p.hp <= 0) {
+    addLog(``, 'turn-sep');
+    addLog(`💀 ${p.name} has fallen!`, 'system');
+    addLog(`☠️ ${e.name} wins. ${pick(COMMENTARY.victory)}`, 'system');
+    STATE.phase = 'gameover';
+    STATE.winner = 'enemy';
+    STATE.winType = 'knockout';
+    return true;
+  }
+  return false;
+}
+ 
+ 
+// ============================================================
+// BATTLE LOG FORMATTER (for sharing)
+// ============================================================
+ 
+function formatShareableLog() {
+  const p = STATE.player, e = STATE.enemy;
+  const lines = [
+    '╔═══════════════════════════════════════╗',
+    '║  CLARITY CLASH: CHAOS ARENA           ║',
+    '╚═══════════════════════════════════════╝',
+    '',
+    `${p.emoji} ${p.name} vs ${e.emoji} ${e.name}`,
+    '',
+  ];
+  for (const entry of STATE.log) {
+    if (entry.type !== 'turn-sep') lines.push(entry.text);
+  }
+  lines.push('');
+  lines.push('─── FINAL STATS ───');
+  lines.push(`${p.emoji} ${p.name}: ${p.hp}/${p.maxHp} HP | ${p.totalDmgDealt} dmg dealt | ${p.hits} hits / ${p.misses} misses`);
+  lines.push(`${e.emoji} ${e.name}: ${e.hp}/${e.maxHp} HP | ${e.totalDmgDealt} dmg dealt | ${e.hits} hits / ${e.misses} misses`);
+  lines.push(`Chaos: ${Math.round(STATE.chaos)} | Clarity: ${Math.round(STATE.clarity)} | Turns: ${STATE.turn}`);
+  lines.push(`Win: ${STATE.winType === 'clarity' ? 'CLARITY TRANSCENDENCE' : 'KNOCKOUT'}`);
+  lines.push('');
+  if (STATE.winner === 'player') {
+    lines.push(`🏆 ${p.name} is victorious!`);
+  } else {
+    lines.push(`☠️ ${e.name} claims victory!`);
+  }
+  lines.push('');
+  lines.push('Play: Clarity Clash: Chaos Arena');
+  return lines.join('\n');
+}
+ 
+function copyBattleLog() {
+  const text = formatShareableLog();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    if (btn) { btn.textContent = '✅ Copied!'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='📋 Copy Battle Log'; btn.classList.remove('copied'); }, 2000); }
+  });
+}
+ 
+// ============================================================
+// RENDERER
+// ============================================================
+ 
+function render() {
+  const app = document.getElementById('app');
+  if (STATE.phase === 'select') {
+    app.innerHTML = renderCharacterSelect();
+  } else {
+    app.innerHTML = renderBattle();
+    // Auto-scroll log
+    const logEl = document.querySelector('.log-container');
+    if (logEl) logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+ 
+function renderCharacterSelect() {
+  let html = `
+    <div class="title">
+      <h1>CLARITY CLASH</h1>
+      <div class="sub">Chaos Arena</div>
+      <div class="tagline">Choose your fighter. Choose poorly.</div>
+    </div>
+    <div class="char-grid">
+  `;
+  CHARACTERS.forEach((c, i) => {
+    html += `
+      <div class="char-card" onclick="selectCharacter(${i})" style="--accent:${c.color}">
+        <div class="char-header">
+          <span class="char-emoji">${c.emoji}</span>
+          <span class="char-name" style="color:${c.color}">${c.name}</span>
+        </div>
+        <div class="char-desc">${c.description}</div>
+        <div class="stat-grid">
+          <div class="stat-row"><span class="stat-label">HP</span><span class="stat-hp">${c.hp}</span></div>
+          <div class="stat-row"><span class="stat-label">DMG</span><span class="stat-dmg">${c.damage}</span></div>
+          <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-def">${c.defense}</span></div>
+          <div class="stat-row"><span class="stat-label">ACC</span><span class="stat-acc">${c.accuracy}</span></div>
+          <div class="stat-row"><span class="stat-label">EVA</span><span class="stat-eva">${c.evasion}</span></div>
+          <div class="stat-row"><span class="stat-label">SPD</span><span class="stat-spd">${c.speed}</span></div>
+        </div>
+        <div style="margin-top:8px;font-size:.62em;color:${c.color}">⚡ ${c.passive.name}: ${c.passive.desc}</div>
+        <div class="char-moves">${c.moves.slice(0,4).map(m=>`<span>${m.name}</span>`).join('')}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  return html;
+}
+ 
+function hpColor(pct) { return pct > 50 ? 'hp-green' : pct > 25 ? 'hp-yellow' : 'hp-red'; }
+ 
+function renderStatusPills(fighter) {
+  return fighter.statuses.map(s => {
+    const def = STATUS_DEFS[s.id];
+    if (!def) return '';
+    const cls = def.type === 'buff' ? 'status-buff' : def.type === 'debuff' ? 'status-debuff' : 'status-neutral';
+    return `<span class="status-pill ${cls}">${def.emoji} ${def.name} (${s.turns})</span>`;
+  }).join('');
+}
+ 
+function chaosLabel(c) {
+  if (c < 20) return 'Simmering';
+  if (c < 40) return 'Unhinged';
+  if (c < 60) return 'Volatile';
+  if (c < 80) return 'Pure Bedlam';
+  return 'MAXIMUM CHAOS';
+}
+function clarityLabel(c) {
+  if (c < 20) return 'Foggy';
+  if (c < 40) return 'Hazy';
+  if (c < 60) return 'Clearing';
+  if (c < 80) return 'Lucid';
+  return 'TRANSCENDENCE';
+}
+ 
+function renderBattle() {
+  const p = STATE.player, e = STATE.enemy;
+  const pPct = Math.max(0, (p.hp / p.maxHp) * 100);
+  const ePct = Math.max(0, (e.hp / e.maxHp) * 100);
+  const isActive = STATE.phase === 'battle';
+ 
+  let html = `
+    <div class="battle-header">
+      <h1>CLARITY CLASH</h1>
+      <div class="turn-indicator">Turn ${STATE.turn}${STATE.turn > 1 ? (STATE.playerGoesFirst ? '' : ' | ' + e.emoji + ' went first') : ''}</div>
+    </div>
+ 
+    <!-- Enemy HP -->
+    <div class="hp-section hp-bar-enemy">
+      <div class="hp-header">
+        <span class="hp-name">${e.emoji} ${e.name}</span>
+        <span class="hp-numbers">${Math.max(0,e.hp)} / ${e.maxHp}</span>
+      </div>
+      <div class="hp-bar-outer"><div class="hp-bar-inner ${hpColor(ePct)}" style="width:${ePct}%"></div></div>
+      <div class="status-effects">${renderStatusPills(e)}</div>
+    </div>
+ 
+    <!-- Meters -->
+    <div class="meters">
+      <div class="meter meter-chaos">
+        <div class="meter-header"><span>🔥 CHAOS</span><span>${Math.round(STATE.chaos)}</span></div>
+        <div class="meter-bar"><div class="meter-fill-chaos" style="width:${STATE.chaos}%"></div></div>
+        <div class="meter-label">${chaosLabel(STATE.chaos)}</div>
+      </div>
+      <div class="meter meter-clarity">
+        <div class="meter-header"><span>✨ CLARITY</span><span>${Math.round(STATE.clarity)}</span></div>
+        <div class="meter-bar"><div class="meter-fill-clarity" style="width:${STATE.clarity}%"></div></div>
+        <div class="meter-label">${clarityLabel(STATE.clarity)}</div>
+      </div>
+    </div>
+ 
+    <!-- Battle Log -->
+    <div class="log-container">
+      ${STATE.log.map(e => `<div class="log-entry log-${e.type}">${e.text || '&nbsp;'}</div>`).join('')}
+    </div>
+ 
+    <!-- Player HP -->
+    <div class="hp-section">
+      <div class="hp-header">
+        <span class="hp-name">${p.emoji} ${p.name} (YOU)</span>
+        <span class="hp-numbers">${Math.max(0,p.hp)} / ${p.maxHp}</span>
+      </div>
+      <div class="hp-bar-outer"><div class="hp-bar-inner ${hpColor(pPct)}" style="width:${pPct}%"></div></div>
+      <div class="status-effects">${renderStatusPills(p)}</div>
+    </div>
+  `;
+ 
+  if (isActive) {
+    html += `<div class="moves-grid">`;
+    p.moves.forEach((m, i) => {
+      const onCd = p.cooldowns[i] > 0;
+      const isShared = i === p.moves.length - 1;
+      const cdAttr = onCd ? `data-cd="${p.cooldowns[i]}T"` : '';
+      html += `
+        <button class="move-btn ${isShared ? 'move-shared' : ''} ${onCd ? 'on-cooldown' : ''}"
+                onclick="executeTurn(${i})" ${onCd ? 'disabled' : ''} ${cdAttr}>
+          <div class="move-name">${m.name}</div>
+          <div class="move-desc">${m.desc}</div>
+          <div class="move-tags">
+            ${m.tags.map(t => `<span class="tag-${t}">${t}</span>`).join('')}
+            ${m.damage > 0 ? `<span class="tag-stat">${m.damage} dmg</span>` : ''}
+            ${m.accuracy < 100 ? `<span class="tag-stat">${m.accuracy}% acc</span>` : ''}
+            ${m.heal ? `<span class="tag-stat" style="color:var(--green)">+${m.heal} hp</span>` : ''}
+            ${m.cooldown > 0 ? `<span class="tag-stat" style="color:var(--orange)">${m.cooldown}T cd</span>` : ''}
+            ${m.statusApply ? `<span class="tag-stat" style="color:var(--pink)">${STATUS_DEFS[m.statusApply]?.emoji||''} ${STATUS_DEFS[m.statusApply]?.name||''}</span>` : ''}
+          </div>
+        </button>
+      `;
+    });
+    html += `</div>`;
+  }
+ 
+  if (STATE.phase === 'gameover') {
+    const won = STATE.winner === 'player';
+    const flavor = won
+      ? [
+          `${p.name} stands over the fallen ${e.name}. Dignity is not among the casualties. It was already dead.`,
+          `Against all odds and common sense, ${p.name} prevails.`,
+          `${e.name} has been defeated. ${p.name} barely qualifies as a winner.`,
+        ]
+      : [
+          `${e.name} has ended your journey. It was ugly.`,
+          `${p.name} lies defeated. The crowd disperses. Nobody makes eye contact.`,
+          `${e.name} stands victorious. Nobody is proud of anyone.`,
+        ];
+ 
+    html += `
+      <div class="game-over">
+        <div class="trophy">${won ? '🏆' : '💀'}</div>
+        <h2>${won ? 'YOU WIN!' : 'YOU DIED!'}</h2>
+        <div class="go-sub">${STATE.winType === 'clarity' ? '✨ CLARITY TRANSCENDENCE ✨' : '💀 KNOCKOUT 💀'}</div>
+        <div class="go-stats">
+          ${p.emoji} ${p.name}: ${p.hp}/${p.maxHp} HP | ${p.totalDmgDealt} dmg | ${p.hits}/${p.hits+p.misses} hits<br>
+          ${e.emoji} ${e.name}: ${e.hp}/${e.maxHp} HP | ${e.totalDmgDealt} dmg | ${e.hits}/${e.hits+e.misses} hits<br>
+          Chaos: ${Math.round(STATE.chaos)} | Clarity: ${Math.round(STATE.clarity)} | Turns: ${STATE.turn}
+        </div>
+        <div class="go-flavor">"${pick(flavor)}"</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="resetState();render()">⚔️ Play Again</button>
+          <button class="btn btn-copy" onclick="copyBattleLog()">📋 Copy Battle Log</button>
+        </div>
+      </div>
+    `;
+  }
+ 
+  return html;
+}
+ 
+// Initial render
+render();
+</script>
+</body>
+</html>

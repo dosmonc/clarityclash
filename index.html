@@ -1,0 +1,2721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clarity Clash: Chaos Arena</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--surface:#13131f;--surface2:#1a1a2e;--border:#2a2a3e;
+  --text:#e0e0e8;--dim:#6a6a8a;--red:#ff4455;--orange:#ff8844;
+  --yellow:#ffcc33;--green:#44dd66;--cyan:#44ddff;--blue:#4488ff;
+  --purple:#aa66ff;--pink:#ff66aa;
+  --arena-bg:linear-gradient(135deg,#0a0a1a 0%,#1a1a3a 50%,#0a0a1a 100%);
+  --chaos-intensity:0;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+.game-container{max-width:800px;margin:0 auto;padding:12px;position:relative}
+
+.arena-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;background:var(--arena-bg);transition:background 1s ease}
+.arena-bg::before{content:'';position:absolute;width:100%;height:100%;background:radial-gradient(circle at 50% 50%,transparent 0%,rgba(0,0,0,0.5) 100%)}
+.arena-particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden;pointer-events:none}
+.particle{position:absolute;width:4px;height:4px;background:var(--purple);border-radius:50%;opacity:0.5;animation:float 8s infinite ease-in-out}
+@keyframes float{0%,100%{transform:translateY(100vh) rotate(0deg);opacity:0}50%{opacity:0.7}100%{transform:translateY(-100vh) rotate(360deg)}}
+
+.title{text-align:center;padding:20px 0}
+.title h1{font-size:2.8em;font-weight:900;background:linear-gradient(135deg,var(--red),var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1.1}
+.title .sub{color:var(--dim);font-size:1.1em;margin-top:4px;letter-spacing:6px;text-transform:uppercase}
+.title .tagline{color:var(--dim);font-size:0.8em;margin-top:8px;font-style:italic}
+
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface);border-radius:8px;margin-bottom:12px}
+.top-bar .user-info{display:flex;align-items:center;gap:8px;font-size:0.85em}
+.top-bar .user-info .avatar{width:28px;height:28px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9em}
+.top-bar .controls{display:flex;gap:6px}
+.icon-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1em;transition:all 0.15s}
+.icon-btn:hover{background:var(--surface);border-color:var(--purple)}
+.icon-btn.active{background:var(--purple);border-color:var(--purple)}
+
+.weekly-banner{background:linear-gradient(90deg,rgba(170,102,255,0.1),rgba(255,102,170,0.1));border:1px solid var(--purple);border-radius:8px;padding:8px 12px;margin-bottom:12px;text-align:center;font-size:0.75em}
+.weekly-banner .banner-title{color:var(--purple);font-weight:700;margin-bottom:4px}
+.weekly-banner .buffs{color:var(--green)}.weekly-banner .nerfs{color:var(--red)}
+
+.char-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:12px 0}
+.char-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s;position:relative}
+.char-card:hover{border-color:var(--purple);transform:translateY(-2px);box-shadow:0 8px 24px rgba(170,102,255,.15)}
+.char-card .char-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.char-card .char-emoji{font-size:2.2em}
+.char-card .char-name{font-weight:800;font-size:1.1em}
+.char-card .char-desc{font-size:.72em;color:var(--dim);font-style:italic;margin-bottom:12px;line-height:1.4}
+.char-card .mastery-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:8px;overflow:hidden}
+.char-card .mastery-fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--orange));border-radius:2px;transition:width 0.3s}
+.char-card .mastery-label{font-size:0.6em;color:var(--yellow);margin-top:2px}
+.char-card .modifier-badge{position:absolute;top:8px;right:8px;font-size:0.65em;padding:2px 6px;border-radius:4px;font-weight:700}
+.modifier-badge.buff{background:rgba(68,221,102,0.2);color:var(--green)}
+.modifier-badge.nerf{background:rgba(255,68,85,0.2);color:var(--red)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:.75em;font-family:'Courier New',monospace}
+.stat-row{display:flex;justify-content:space-between}
+.stat-label{color:var(--dim)}
+.stat-hp{color:var(--green)}.stat-dmg{color:var(--red)}.stat-def{color:var(--blue)}.stat-acc{color:var(--yellow)}.stat-eva{color:var(--purple)}.stat-spd{color:var(--cyan)}
+.char-moves{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.char-moves span{font-size:.62em;background:var(--surface2);color:var(--dim);padding:2px 6px;border-radius:4px}
+
+.fighter-portraits{display:flex;justify-content:space-between;align-items:center;margin:12px 0}
+.fighter-portrait{display:flex;flex-direction:column;align-items:center;gap:8px}
+.portrait-emoji{font-size:4rem;filter:drop-shadow(0 0 20px var(--portrait-color,var(--purple)));transition:all 0.3s}
+.portrait-emoji.shake{animation:portraitShake 0.3s ease}
+.portrait-emoji.pulse{animation:portraitPulse 0.5s ease}
+.portrait-emoji.fade{opacity:0.3;transition:opacity 0.3s}
+.portrait-name{font-weight:700;font-size:0.9em}
+.portrait-you{color:var(--cyan);font-size:0.65em}
+@keyframes portraitShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes portraitPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.vs-indicator{font-size:2em;font-weight:900;color:var(--red);text-shadow:0 0 20px var(--red)}
+
+.battle-header{text-align:center;margin-bottom:8px}
+.battle-header h1{font-size:1.6em;font-weight:900;background:linear-gradient(135deg,var(--red),var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.turn-indicator{color:var(--dim);font-size:.8em;font-family:monospace}
+.turn-indicator .active-turn{color:var(--cyan);font-weight:700}
+
+.turn-timer{height:4px;background:var(--surface2);border-radius:2px;margin:8px 0;overflow:hidden}
+.turn-timer-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));border-radius:2px;transition:width 0.1s linear}
+
+.combo-display{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center}
+.combo-chain{font-size:0.75em;color:var(--yellow)}
+.combo-multiplier{font-size:1.1em;font-weight:900;color:var(--orange)}
+.combo-hint{font-size:0.65em;color:var(--dim);font-style:italic}
+
+.hp-section{margin:6px 0;position:relative}
+.hp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-size:.82em}
+.hp-name{font-weight:700;display:flex;align-items:center;gap:6px}
+.hp-numbers{font-family:monospace;color:var(--dim);font-size:.85em}
+.hp-bar-outer{height:18px;background:var(--surface2);border-radius:9px;overflow:hidden;border:1px solid var(--border);position:relative}
+.hp-bar-inner{height:100%;border-radius:9px;transition:width .6s ease}
+.hp-green{background:linear-gradient(90deg,#22aa44,#44dd66)}.hp-yellow{background:linear-gradient(90deg,#cc8800,#ffcc33)}.hp-red{background:linear-gradient(90deg,#cc2233,#ff4455)}
+.hp-bar-enemy .hp-bar-inner{direction:rtl}
+.hp-section.active-fighter .hp-bar-outer{box-shadow:0 0 12px var(--cyan)}
+.hp-section.shake{animation:hpShake 0.3s ease}
+@keyframes hpShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+.floating-damage{position:absolute;right:20px;top:-10px;font-size:1.5em;font-weight:900;color:var(--red);text-shadow:0 0 10px var(--red);animation:floatUp 1s ease forwards;pointer-events:none;z-index:100}
+.floating-damage.heal{color:var(--green);text-shadow:0 0 10px var(--green)}
+.floating-damage.crit{font-size:2em;color:var(--orange)}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(0.8)}}
+
+.meters{display:flex;gap:12px;margin:8px 0}
+.meter{flex:1}
+.meter-header{display:flex;justify-content:space-between;font-size:.72em;font-weight:700;margin-bottom:2px}
+.meter-chaos .meter-header{color:var(--orange)}.meter-clarity .meter-header{color:var(--cyan)}
+.meter-bar{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.meter-fill-chaos{height:100%;background:linear-gradient(90deg,var(--red),var(--orange));border-radius:5px;transition:width .5s}
+.meter-fill-clarity{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:5px;transition:width .5s}
+.meter-label{font-size:.6em;color:var(--dim);text-align:center;margin-top:2px;font-style:italic}
+
+.status-effects{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0;min-height:20px}
+.status-pill{font-size:.6em;padding:2px 7px;border-radius:8px;font-weight:600;animation:fadeInPill .3s}
+@keyframes fadeInPill{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.status-buff{background:rgba(68,221,102,.15);color:var(--green);border:1px solid rgba(68,221,102,.3)}
+.status-debuff{background:rgba(255,68,85,.15);color:var(--red);border:1px solid rgba(255,68,85,.3)}
+.status-neutral{background:rgba(170,102,255,.15);color:var(--purple);border:1px solid rgba(170,102,255,.3)}
+.status-pop{position:absolute;font-size:1.5em;animation:statusPop 0.8s ease forwards}
+@keyframes statusPop{0%{opacity:0;transform:translateY(20px) scale(0.5)}30%{opacity:1;transform:translateY(-10px) scale(1.2)}100%{opacity:0;transform:translateY(-30px) scale(1)}}
+
+.log-container{background:var(--surface);border:1px solid var(--border);border-radius:10px;height:180px;overflow-y:auto;padding:10px;margin:8px 0;scroll-behavior:smooth}
+.log-container::-webkit-scrollbar{width:6px}.log-container::-webkit-scrollbar-track{background:var(--surface)}.log-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.log-entry{font-family:'Courier New',monospace;font-size:.72em;line-height:1.6;animation:logSlide .3s ease}
+@keyframes logSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.log-move{color:var(--yellow)}.log-damage{color:var(--red)}.log-miss{color:var(--dim)}.log-event{color:var(--purple)}.log-commentary{color:var(--dim);font-style:italic}.log-system{color:var(--cyan);font-weight:700}.log-heal{color:var(--green)}.log-status{color:var(--pink)}.log-turn-sep{color:var(--border);user-select:none}.log-crit{color:var(--orange);font-weight:700}.log-combo{color:var(--yellow);font-weight:700}
+
+.moves-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.move-btn{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;transition:all .15s;color:var(--text);position:relative}
+.move-btn:hover:not(:disabled){border-color:var(--purple);background:var(--surface2);transform:translateY(-1px)}
+.move-btn:active:not(:disabled){transform:translateY(0)}
+.move-btn:disabled{opacity:.4;cursor:not-allowed}
+.move-btn.locked{pointer-events:none;opacity:0.5}
+.move-btn .move-name{font-weight:700;font-size:.85em;margin-bottom:4px}
+.move-btn .move-desc{font-size:.6em;color:var(--dim);font-style:italic;line-height:1.3;margin-bottom:5px}
+.move-btn .move-tags{display:flex;gap:3px;flex-wrap:wrap}
+.move-btn .move-tags span{font-size:.58em;padding:1px 5px;border-radius:3px;font-weight:600}
+.tag-stealth{background:rgba(170,102,255,.2);color:var(--purple)}.tag-speed{background:rgba(255,204,51,.2);color:var(--yellow)}.tag-sloppy{background:rgba(255,68,85,.2);color:var(--red)}.tag-projectile{background:rgba(68,136,255,.2);color:var(--blue)}
+.tag-stat{background:var(--surface2);color:var(--dim)}
+.move-shared{grid-column:1/-1}
+.move-btn.combo-hint-move{border-color:var(--yellow);box-shadow:0 0 8px rgba(255,204,51,0.3)}
+.move-btn.on-cooldown{position:relative}
+.move-btn.on-cooldown::after{content:attr(data-cd);position:absolute;top:4px;right:8px;font-size:.6em;color:var(--orange);font-weight:700}
+
+.screen-flash{position:fixed;top:0;left:0;width:100%;height:100%;background:white;opacity:0;pointer-events:none;z-index:1000;transition:opacity 0.1s}
+.screen-flash.active{opacity:0.3;transition:opacity 0s}
+.screen-wobble{animation:wobble 0.4s ease}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-1deg)}75%{transform:rotate(1deg)}}
+
+.move-animation{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:500}
+.projectile{position:absolute;font-size:2em;animation:projectileFly 0.5s ease forwards}
+@keyframes projectileFly{0%{opacity:1}100%{opacity:0}}
+.dash-trail{position:absolute;display:flex;gap:4px;animation:dashTrail 0.4s ease forwards}
+@keyframes dashTrail{0%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(100px)}}
+.heal-particles{position:absolute;display:flex;flex-wrap:wrap;gap:4px;animation:healBurst 0.6s ease forwards}
+@keyframes healBurst{0%{opacity:1;transform:scale(0.5)}50%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1)}}
+
+.game-over{text-align:center;padding:24px;background:var(--surface);border:2px solid var(--border);border-radius:14px;margin:12px 0}
+.game-over .trophy{font-size:3em;margin-bottom:8px}
+.game-over h2{font-size:1.8em;font-weight:900;margin-bottom:6px}
+.game-over .go-sub{color:var(--dim);font-size:.85em;margin-bottom:4px}
+.game-over .go-stats{color:var(--dim);font-size:.72em;font-family:monospace;margin-bottom:16px}
+.game-over .go-flavor{color:var(--purple);font-size:.75em;font-style:italic;margin-bottom:16px}
+.go-highlight{background:var(--surface2);border-radius:8px;padding:12px;margin:12px 0;font-size:0.8em}
+.go-highlight .label{color:var(--dim);font-size:0.85em;margin-bottom:4px}
+.go-highlight .value{color:var(--yellow);font-weight:700}
+.stat-counter{font-family:monospace;font-size:1.2em;font-weight:700;color:var(--cyan)}
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{padding:10px 20px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-weight:700;font-size:.9em;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--surface);transform:translateY(-1px)}
+.btn-primary{background:var(--purple);border-color:var(--purple);color:#fff}
+.btn-primary:hover{background:#9955ee}
+.btn-copy.copied{background:var(--green);border-color:var(--green);color:#000}
+.btn-small{padding:6px 12px;font-size:0.75em}
+
+.event-banner{background:linear-gradient(135deg,rgba(170,102,255,.1),rgba(255,68,85,.1));border:1px solid var(--purple);border-radius:10px;padding:10px 14px;margin:6px 0;animation:eventPop .4s ease}
+@keyframes eventPop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.event-banner .event-name{color:var(--purple);font-weight:800;font-size:.85em}.event-banner .event-desc{color:var(--dim);font-size:.7em;font-style:italic;margin-top:3px}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;animation:slideUp 0.3s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal h2{font-size:1.4em;margin-bottom:16px;text-align:center}
+.modal-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.modal-tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.85em;color:var(--dim);transition:all 0.15s}
+.modal-tab:hover,.modal-tab.active{background:var(--surface2);color:var(--text)}
+.modal-tab.active{color:var(--purple);font-weight:700}
+
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:0.85em;color:var(--dim);margin-bottom:4px}
+.form-group input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:1em}
+.form-group input:focus{outline:none;border-color:var(--purple)}
+.form-error{color:var(--red);font-size:0.75em;margin-top:4px}
+
+.leaderboard-list{list-style:none}
+.leaderboard-item{display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px}
+.leaderboard-rank{font-size:1.2em;min-width:30px}
+.leaderboard-name{flex:1;font-weight:600}
+.leaderboard-stats{font-size:0.75em;color:var(--dim);font-family:monospace}
+
+.match-item{background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px}
+.match-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.match-result{font-weight:700}.match-result.win{color:var(--green)}.match-result.loss{color:var(--red)}
+.match-details{font-size:0.75em;color:var(--dim)}
+
+.profile-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}
+.profile-stat{background:var(--surface2);border-radius:8px;padding:12px;text-align:center}
+.profile-stat .value{font-size:1.5em;font-weight:900;color:var(--cyan)}
+.profile-stat .label{font-size:0.75em;color:var(--dim)}
+
+.matchmaking-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.matchmaking-spinner{width:60px;height:60px;border:4px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.matchmaking-text{font-size:1.2em;color:var(--dim)}
+.matchmaking-timer{font-family:monospace;color:var(--cyan)}
+
+.strategy-section{margin-bottom:20px}
+.strategy-section h3{font-size:1em;color:var(--purple);margin-bottom:8px}
+.tag-matrix{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:0.65em}
+.tag-matrix .cell{padding:4px;background:var(--surface2);border-radius:4px;text-align:center}
+.tag-matrix .header{font-weight:700;color:var(--dim)}
+.tag-matrix .good{color:var(--green)}.tag-matrix .bad{color:var(--red)}.tag-matrix .neutral{color:var(--dim)}
+
+.combo-discovery{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:2px solid var(--yellow);border-radius:12px;padding:20px;z-index:1000;animation:comboPop 0.5s ease;text-align:center}
+@keyframes comboPop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}50%{transform:translate(-50%,-50%) scale(1.1)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.combo-discovery h3{color:var(--yellow);margin-bottom:8px}
+
+@media(max-width:600px){
+  .title h1{font-size:2em}
+  .moves-grid{grid-template-columns:1fr;position:fixed;bottom:0;left:0;right:0;background:var(--bg);padding:12px;border-top:1px solid var(--border);max-height:40vh;overflow-y:auto;z-index:100}
+  .char-grid{grid-template-columns:1fr}
+  .game-container{padding-bottom:200px}
+  .fighter-portraits{flex-direction:row;gap:10px}
+  .portrait-emoji{font-size:3rem}
+  .log-container{height:120px}
+  .modal{max-height:90vh;width:95%}
+  .top-bar{flex-wrap:wrap;gap:8px}
+}
+</style>
+</head>
+<body>
+<div class="arena-bg"></div>
+<div class="arena-particles" id="particles"></div>
+<div class="screen-flash" id="screenFlash"></div>
+<div class="move-animation" id="moveAnimation"></div>
+<div class="game-container" id="app"></div>
+<script>
+// ============================================================
+// CLARITY CLASH: CHAOS ARENA - Complete Game Engine v2.1
+// All bugs fixed
+// ============================================================
+
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const chance = pct => Math.random() * 100 < pct;
+const delay = ms => new Promise(r => setTimeout(r, ms));
+const getWeekNumber = () => Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+
+// === AUDIO MANAGER ===
+const AudioManager = {
+  ctx: null,
+  masterGain: null,
+  muted: false,
+  initialized: false,
+  bgOsc: null,
+  bgGain: null,
+  bgLfo: null,
+  
+  init() {
+    if (this.initialized) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.connect(this.ctx.destination);
+      this.masterGain.gain.value = 0.3;
+      this.initialized = true;
+    } catch (e) {
+      console.warn('Web Audio API not supported');
+    }
+  },
+  
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  },
+  
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.muted ? 0 : 0.3;
+    }
+    return this.muted;
+  },
+  
+  playTone(freq, duration, type = 'sine', attack = 0.01) {
+    if (!this.ctx || this.muted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + attack);
+    gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  },
+  
+  playNoise(duration, freq = 1000) {
+    if (!this.ctx || this.muted) return;
+    const bufferSize = this.ctx.sampleRate * duration;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    }
+    const source = this.ctx.createBufferSource();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+    source.buffer = buffer;
+    filter.type = 'lowpass';
+    filter.frequency.value = freq;
+    gain.gain.value = 0.2;
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    source.start();
+  },
+  
+  playHit() {
+    this.playNoise(0.15, 2000);
+    this.playTone(150, 0.1, 'square', 0.001);
+  },
+  
+  playMiss() {
+    if (!this.ctx || this.muted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  },
+  
+  playHeal() {
+    this.playTone(523, 0.15, 'sine');
+    setTimeout(() => this.playTone(659, 0.15, 'sine'), 100);
+    setTimeout(() => this.playTone(784, 0.2, 'sine'), 200);
+  },
+  
+  playCrit() {
+    this.playTone(80, 0.2, 'sawtooth', 0.001);
+    this.playNoise(0.2, 3000);
+    setTimeout(() => this.playTone(120, 0.15, 'square'), 50);
+  },
+  
+  playEvent() {
+    this.playTone(880, 0.1, 'sine');
+    setTimeout(() => this.playTone(1100, 0.15, 'sine'), 100);
+  },
+  
+  playCombo(level) {
+    const baseFreq = 400 + (level * 100);
+    this.playTone(baseFreq, 0.1, 'triangle');
+    setTimeout(() => this.playTone(baseFreq * 1.25, 0.1, 'triangle'), 50);
+    setTimeout(() => this.playTone(baseFreq * 1.5, 0.15, 'triangle'), 100);
+  },
+  
+  playVictory() {
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((n, i) => setTimeout(() => this.playTone(n, 0.3, 'sine'), i * 150));
+  },
+  
+  playDefeat() {
+    const notes = [400, 350, 300, 250];
+    notes.forEach((n, i) => setTimeout(() => this.playTone(n, 0.3, 'sawtooth'), i * 200));
+  },
+  
+  playClassSound(className) {
+    const sounds = {
+      'Crack Fairy': () => this.playTone(1200, 0.1, 'sine'),
+      'Meth Wizard': () => { this.playTone(300, 0.15, 'sawtooth'); this.playNoise(0.1, 1500); },
+      'Coke Bard': () => { this.playTone(600, 0.1, 'triangle'); this.playTone(800, 0.1, 'triangle'); },
+      'Drunken Dwarf': () => this.playTone(100, 0.2, 'square'),
+      'Benzo Elf': () => this.playTone(400, 0.3, 'sine'),
+      'Heroin Gnome': () => this.playTone(200, 0.25, 'sawtooth'),
+      'Ass Goblin': () => this.playNoise(0.15, 500),
+    };
+    (sounds[className] || (() => this.playHit()))();
+  },
+  
+  startBackgroundLoop(chaosLevel = 10) {
+    if (!this.ctx) return;
+    // FIX: Stop existing loop before starting new one
+    this.stopBackgroundLoop();
+    
+    this.bgOsc = this.ctx.createOscillator();
+    this.bgGain = this.ctx.createGain();
+    this.bgLfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    
+    this.bgOsc.type = 'sine';
+    this.bgOsc.frequency.value = 55;
+    this.bgLfo.type = 'sine';
+    this.bgLfo.frequency.value = 0.5;
+    lfoGain.gain.value = 5;
+    this.bgGain.gain.value = this.muted ? 0 : 0.05;
+    
+    this.bgLfo.connect(lfoGain);
+    lfoGain.connect(this.bgOsc.frequency);
+    this.bgOsc.connect(this.bgGain);
+    this.bgGain.connect(this.masterGain);
+    
+    this.bgOsc.start();
+    this.bgLfo.start();
+  },
+  
+  updateBackgroundChaos(chaosLevel) {
+    if (this.bgOsc && this.bgGain) {
+      this.bgOsc.frequency.value = 55 + (chaosLevel * 0.5);
+      this.bgGain.gain.value = this.muted ? 0 : (0.03 + (chaosLevel * 0.001));
+    }
+  },
+  
+  stopBackgroundLoop() {
+    if (this.bgOsc) {
+      try { this.bgOsc.stop(); } catch(e) {}
+      this.bgOsc = null;
+    }
+    if (this.bgLfo) {
+      try { this.bgLfo.stop(); } catch(e) {}
+      this.bgLfo = null;
+    }
+    this.bgGain = null;
+  }
+};
+
+// === TAG INTERACTION MATRIX ===
+const TAG_MATRIX = {
+  'speed|sloppy':     { dmgMult: 1.5, accBonus: 10, note: 'Speed exploits the sloppy!' },
+  'speed|stealth':    { dmgMult: 1.0, accBonus: -10, note: 'Stealth slips past the speedster!' },
+  'speed|projectile': { dmgMult: 1.0, accBonus: 5, note: 'Speed closes the gap!' },
+  'stealth|sloppy':   { dmgMult: 1.3, accBonus: 15, note: 'Stealth catches them fumbling!' },
+  'stealth|speed':    { dmgMult: 0.8, accBonus: -15, note: 'Too fast to ambush!' },
+  'stealth|projectile':{ dmgMult: 1.2, accBonus: -5, note: 'Hard to shoot what you cannot see!' },
+  'sloppy|stealth':   { dmgMult: 1.2, accBonus: 20, note: 'Chaotic flailing finds the hidden!' },
+  'sloppy|speed':     { dmgMult: 0.8, accBonus: -10, note: 'Too slow and messy!' },
+  'sloppy|projectile':{ dmgMult: 1.1, accBonus: 0, note: 'Sloppy deflects... somehow!' },
+  'projectile|stealth':{ dmgMult: 0.7, accBonus: -20, note: 'Can\'t shoot what you can\'t find!' },
+  'projectile|speed': { dmgMult: 1.0, accBonus: -5, note: 'Target too fast!' },
+  'projectile|sloppy':{ dmgMult: 1.4, accBonus: 15, note: 'Easy target! Projectile hits clean!' },
+};
+
+// === STATUS EFFECTS ===
+const STATUS_DEFS = {
+  burning:    { name:'Burning',     type:'debuff', statMod:{damage:-2}, dot:5, emoji:'🔥' },
+  focused:    { name:'Focused',     type:'buff',   statMod:{accuracy:15,damage:3}, dot:0, emoji:'🎯' },
+  dizzy:      { name:'Dizzy',       type:'debuff', statMod:{accuracy:-20,evasion:-10}, dot:0, emoji:'💫' },
+  shielded:   { name:'Shielded',    type:'buff',   statMod:{defense:5}, dot:0, emoji:'🛡' },
+  poisoned:   { name:'Poisoned',    type:'debuff', statMod:{}, dot:8, emoji:'🤢' },
+  enraged:    { name:'Enraged',     type:'buff',   statMod:{damage:6,defense:-3}, dot:0, emoji:'😤' },
+  hidden:     { name:'Hidden',      type:'buff',   statMod:{evasion:25}, dot:0, emoji:'👻' },
+  slowed:     { name:'Slowed',      type:'debuff', statMod:{evasion:-15}, dot:0, emoji:'🐌' },
+  inspired:   { name:'Inspired',    type:'buff',   statMod:{accuracy:10,damage:2}, dot:0, emoji:'✨' },
+  confused:   { name:'Confused',    type:'debuff', statMod:{accuracy:-15}, dot:0, emoji:'❓' },
+};
+
+// === CHARACTERS ===
+const CHARACTERS = [
+  {
+    name:'Crack Fairy', emoji:'🧚', color:'#ff66aa',
+    hp:85, damage:14, defense:4, accuracy:68, evasion:35, speed:90,
+    description:'Moves at the speed of poor decisions. Impossible to pin down.',
+    passive:{ name:'Tweaker Reflexes', desc:'+10 evasion when HP below 40%' },
+    combos: [
+      { sequence: [1, 3], name: 'Shadow Dance', bonus: { dmgMult: 2.0 }, desc: 'Glitter Dash → Shadow Flit' },
+      { sequence: [0, 2], name: 'Pixie Storm', bonus: { accBonus: 30 }, desc: 'Pixie Tweak → Wing Slash' },
+    ],
+    moves:[
+      { name:'Pixie Tweak', damage:18, accuracy:72, tags:['speed'], desc:'Vibrates at a frequency that causes structural damage.', chaos:8, clarity:-3, cooldown:0, statusApply:null },
+      { name:'Glitter Dash', damage:13, accuracy:85, tags:['speed','stealth'], desc:'Zooms past leaving a trail of suspicious glitter.', chaos:5, clarity:2, cooldown:0, statusApply:'hidden' },
+      { name:'Wing Slash', damage:24, accuracy:52, tags:['speed','sloppy'], desc:'Flails wings with reckless abandon.', chaos:12, clarity:-5, cooldown:2, statusApply:null },
+      { name:'Shadow Flit', damage:16, accuracy:80, tags:['stealth'], desc:'Disappears. Reappears behind you.', chaos:3, clarity:5, cooldown:0, statusApply:null },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Meth Wizard', emoji:'🧙', color:'#44ddff',
+    hp:90, damage:20, defense:5, accuracy:50, evasion:15, speed:70,
+    description:'Has been awake for 9 days. Sees colors you can\'t imagine.',
+    passive:{ name:'Tweaked Senses', desc:'+8 damage when Chaos above 60' },
+    combos: [
+      { sequence: [1, 0], name: 'Paranoid Blast', bonus: { dmgMult: 1.8 }, desc: 'Paranoia Beam → Crystal Blast' },
+      { sequence: [2, 3], name: 'Shadow Focus', bonus: { statusApply: 'focused' }, desc: 'Tweaker Focus → Shadow People' },
+    ],
+    moves:[
+      { name:'Crystal Blast', damage:28, accuracy:45, tags:['projectile','sloppy'], desc:'Hurls a crystalline projectile.', chaos:15, clarity:-8, cooldown:2, statusApply:'burning' },
+      { name:'Paranoia Beam', damage:20, accuracy:60, tags:['projectile'], desc:'A beam of pure suspicion.', chaos:10, clarity:-5, cooldown:0, statusApply:null },
+      { name:'Tweaker Focus', damage:15, accuracy:90, tags:['speed'], desc:'Channels energy into one precise strike.', chaos:-5, clarity:15, cooldown:3, statusApply:'focused' },
+      { name:'Shadow People', damage:25, accuracy:40, tags:['sloppy','stealth'], desc:'Summons the shadow people.', chaos:20, clarity:-10, cooldown:2, statusApply:'confused' },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Coke Bard', emoji:'🎸', color:'#ffcc33',
+    hp:95, damage:13, defense:6, accuracy:75, evasion:22, speed:80,
+    description:'Won\'t stop talking. Thinks every idea is genius.',
+    passive:{ name:'Main Character Energy', desc:'+5 clarity per turn passively' },
+    combos: [
+      { sequence: [0, 1], name: 'Inspiring Monologue', bonus: { heal: 10 }, desc: 'Monologue → Inspire Delusion' },
+      { sequence: [3, 2], name: 'Bathroom Slam', bonus: { dmgMult: 1.6 }, desc: 'Bathroom Break → Jaw Clench Slam' },
+    ],
+    moves:[
+      { name:'Monologue Barrage', damage:16, accuracy:82, tags:['speed'], desc:'Talks so fast it deals actual damage.', chaos:5, clarity:6, cooldown:0, statusApply:null },
+      { name:'Inspire Delusion', damage:8, accuracy:92, tags:[], desc:'Convinces everyone things are going great.', chaos:-8, clarity:12, cooldown:0, statusApply:'inspired' },
+      { name:'Jaw Clench Slam', damage:22, accuracy:62, tags:['speed','sloppy'], desc:'Channels jaw tension into a headbutt.', chaos:10, clarity:-3, cooldown:1, statusApply:null },
+      { name:'Bathroom Break', damage:5, accuracy:95, tags:['stealth'], desc:'Disappears to the bathroom.', chaos:-3, clarity:8, cooldown:2, heal:12, statusApply:'focused' },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Drunken Dwarf', emoji:'🍺', color:'#ff8844',
+    hp:120, damage:16, defense:9, accuracy:45, evasion:10, speed:30,
+    description:'Built like a barrel. Smells like one too.',
+    passive:{ name:'Liquid Armor', desc:'Defense +3 when HP above 60%' },
+    combos: [
+      { sequence: [0, 2], name: 'Drunken Roll', bonus: { dmgMult: 1.5, statusApply: 'dizzy' }, desc: 'Barrel Roll → Drunken Stumble' },
+      { sequence: [3, 1], name: 'Liquid Smash', bonus: { dmgMult: 2.0 }, desc: 'Liquid Courage → Bottle Smash' },
+    ],
+    moves:[
+      { name:'Barrel Roll', damage:20, accuracy:50, tags:['sloppy'], desc:'Rolls at the enemy.', chaos:10, clarity:-5, cooldown:0, statusApply:'dizzy' },
+      { name:'Bottle Smash', damage:26, accuracy:40, tags:['sloppy','projectile'], desc:'Throws a bottle.', chaos:15, clarity:-8, cooldown:1, statusApply:'burning' },
+      { name:'Drunken Stumble', damage:14, accuracy:70, tags:['sloppy','speed'], desc:'Stumbles forward with velocity.', chaos:8, clarity:0, cooldown:0, statusApply:null },
+      { name:'Liquid Courage', damage:0, accuracy:100, tags:[], desc:'Takes a swig. HP up.', chaos:5, clarity:-3, cooldown:3, heal:22, statusApply:'enraged' },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Benzo Elf', emoji:'🧝', color:'#aa66ff',
+    hp:105, damage:11, defense:7, accuracy:72, evasion:30, speed:40,
+    description:'Extremely calm. Possibly too calm.',
+    passive:{ name:'Tranquil Mind', desc:'Cannot be Confused; +5 clarity when hit' },
+    combos: [
+      { sequence: [1, 0], name: 'Tranquil Blackout', bonus: { dmgMult: 1.7 }, desc: 'Tranquil Dodge → Blackout Strike' },
+      { sequence: [2, 3], name: 'Memory Punch', bonus: { statusApply: 'confused' }, desc: 'Memory Wipe → Slow Motion Punch' },
+    ],
+    moves:[
+      { name:'Blackout Strike', damage:20, accuracy:60, tags:['stealth','sloppy'], desc:'Attacks but won\'t remember it.', chaos:12, clarity:-8, cooldown:1, statusApply:null },
+      { name:'Tranquil Dodge', damage:9, accuracy:92, tags:['stealth'], desc:'Sways with unsettling serenity.', chaos:-5, clarity:10, cooldown:0, statusApply:'hidden' },
+      { name:'Memory Wipe', damage:14, accuracy:78, tags:['stealth'], desc:'Makes opponent forget.', chaos:5, clarity:5, cooldown:2, statusApply:'confused' },
+      { name:'Slow Motion Punch', damage:18, accuracy:80, tags:['sloppy'], desc:'Throws a punch in slow motion.', chaos:3, clarity:3, cooldown:0, statusApply:'slowed' },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Heroin Gnome', emoji:'🍄', color:'#44dd66',
+    hp:88, damage:22, defense:3, accuracy:55, evasion:14, speed:20,
+    description:'Nods off mid-combat. Hits HARD when awake.',
+    passive:{ name:'Pain Immunity', desc:'Incoming damage -15% when HP below 30%' },
+    combos: [
+      { sequence: [2, 0], name: 'Sleepy Slam', bonus: { dmgMult: 1.8 }, desc: 'Sleepy Shuffle → Nod Off Slam' },
+      { sequence: [1, 3], name: 'Dream Panic', bonus: { heal: 15, statusApply: 'enraged' }, desc: 'Dream Needle → Narcan Panic' },
+    ],
+    moves:[
+      { name:'Nod Off Slam', damage:32, accuracy:35, tags:['sloppy'], desc:'Falls asleep mid-swing.', chaos:15, clarity:-10, cooldown:3, statusApply:null },
+      { name:'Dream Needle', damage:20, accuracy:65, tags:['stealth','projectile'], desc:'A needle from the dream realm.', chaos:8, clarity:-3, cooldown:1, statusApply:'poisoned' },
+      { name:'Sleepy Shuffle', damage:13, accuracy:75, tags:['stealth','sloppy'], desc:'Shuffles toward you eyes closed.', chaos:5, clarity:2, cooldown:0, statusApply:null },
+      { name:'Narcan Panic', damage:10, accuracy:88, tags:['speed'], desc:'Suddenly awake. Panicking.', chaos:12, clarity:8, cooldown:2, heal:10, statusApply:'enraged' },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  },
+  {
+    name:'Ass Goblin', emoji:'👺', color:'#ff4455',
+    hp:100, damage:15, defense:5, accuracy:65, evasion:28, speed:75,
+    description:'Nobody knows what this creature is. Feeds on chaos.',
+    passive:{ name:'Chaos Feeder', desc:'+1 damage for every 10 Chaos' },
+    combos: [
+      { sequence: [1, 0], name: 'Goblin Gas', bonus: { dmgMult: 1.6 }, desc: 'Goblin Dash → Chaos Fart' },
+      { sequence: [2, 3], name: 'Unnerving Gremlin', bonus: { statusApply: 'confused' }, desc: 'Unnerving Stare → Gremlin Mode' },
+    ],
+    moves:[
+      { name:'Chaos Fart', damage:18, accuracy:78, tags:['projectile','sloppy'], desc:'An AOE attack.', chaos:18, clarity:-10, cooldown:1, statusApply:'poisoned' },
+      { name:'Goblin Dash', damage:14, accuracy:82, tags:['speed'], desc:'Runs at you on all fours.', chaos:8, clarity:0, cooldown:0, statusApply:null },
+      { name:'Unnerving Stare', damage:10, accuracy:95, tags:['stealth'], desc:'Just... stares.', chaos:10, clarity:5, cooldown:0, statusApply:'confused' },
+      { name:'Gremlin Mode', damage:26, accuracy:48, tags:['speed','sloppy'], desc:'Full gremlin.', chaos:20, clarity:-8, cooldown:2, statusApply:'enraged' },
+      { name:'Let Me Hold \$5', damage:0, accuracy:100, tags:[], desc:'Beg for \$5. They lose focus.', chaos:10, clarity:-5, cooldown:0, heal:15, statusApply:'confused' },
+    ]
+  }
+];
+
+// === RANDOM EVENTS ===
+const EVENTS = [
+  { name:'Found a Rock', desc:'You found a sharp rock. You feel powerful.', target:'player', effect:s=>{ s.player.tempDamage+=5; }, chaosD:2, clarityD:0, minChaos:0 },
+  { name:'Phone Buzzed', desc:'Checked your phone mid-fight. Spam text.', target:'player', effect:s=>{ s.player.tempAcc-=15; }, chaosD:5, clarityD:-5, minChaos:0 },
+  { name:'Sudden Confidence', desc:'Unearned confidence washes over you.', target:'player', effect:s=>{ addStatus(s.player,'focused',2); }, chaosD:-5, clarityD:10, minChaos:0 },
+  { name:'Existential Thought', desc:'"What even IS damage?"', target:'player', effect:s=>{ s.player.tempDef-=4; }, chaosD:15, clarityD:-10, minChaos:10 },
+  { name:'Knocking at the Door', desc:'Both fighters freeze.', target:'both', effect:s=>{ s.player.tempEva+=12; s.enemy.tempEva+=12; }, chaosD:5, clarityD:0, minChaos:0 },
+  { name:'Pocket Lint Discovery', desc:'Weirdly comforting.', target:'player', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+10); }, chaosD:0, clarityD:3, minChaos:0 },
+  { name:'Someone\'s Watching', desc:'You feel eyes.', target:'player', effect:s=>{ addStatus(s.player,'hidden',1); }, chaosD:8, clarityD:-3, minChaos:15 },
+  { name:'Floor Snack', desc:'Found something edible.', target:'player', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+14); }, chaosD:8, clarityD:-2, minChaos:5 },
+  { name:'Wi-Fi Dropped', desc:'Everyone panics.', target:'both', effect:s=>{ s.player.tempAcc-=10; s.enemy.tempAcc-=10; }, chaosD:20, clarityD:-8, minChaos:20 },
+  { name:'Motivational Poster', desc:'"Believe." You kinda do.', target:'player', effect:s=>{ addStatus(s.player,'inspired',2); }, chaosD:-5, clarityD:8, minChaos:0 },
+  { name:'Surprise Nap', desc:'Your opponent falls asleep standing.', target:'enemy', effect:s=>{ addStatus(s.enemy,'slowed',2); }, chaosD:5, clarityD:5, minChaos:10 },
+  { name:'Mysterious Fog', desc:'Visibility is now a suggestion.', target:'both', effect:s=>{ s.player.tempAcc-=12; s.enemy.tempAcc-=12; s.player.tempEva+=8; s.enemy.tempEva+=8; }, chaosD:15, clarityD:-10, minChaos:25 },
+  { name:'Power Outlet', desc:'Phone charges. Morale restored.', target:'player', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+6); }, chaosD:-8, clarityD:12, minChaos:0 },
+  { name:'Bird Lands on Arena', desc:'A pigeon lands.', target:'both', effect:s=>{ s.player.tempAcc+=5; s.enemy.tempAcc+=5; }, chaosD:3, clarityD:3, minChaos:0 },
+  { name:'Someone Yells "WORLDSTAR"', desc:'The pressure is ON.', target:'both', effect:s=>{ addStatus(s.player,'enraged',2); addStatus(s.enemy,'enraged',2); }, chaosD:12, clarityD:-5, minChaos:30 },
+  { name:'Deja Vu', desc:'Didn\'t this happen already?', target:'both', effect:s=>{ addStatus(s.player,'confused',1); addStatus(s.enemy,'confused',1); }, chaosD:12, clarityD:-5, minChaos:20 },
+  { name:'Free Sample Lady', desc:'Tiny cup of juice for everyone.', target:'both', effect:s=>{ s.player.hp=Math.min(s.player.maxHp,s.player.hp+8); s.enemy.hp=Math.min(s.enemy.maxHp,s.enemy.hp+8); }, chaosD:-3, clarityD:5, minChaos:0 },
+  { name:'Car Alarm Outside', desc:'BEEP BEEP BEEP.', target:'both', effect:s=>{ addStatus(s.player,'dizzy',1); addStatus(s.enemy,'dizzy',1); }, chaosD:10, clarityD:-8, minChaos:15 },
+];
+
+// === COMMENTARY ===
+const COMMENTARY = {
+  general: [
+    'That did not go how anyone planned.','Confidence was high. Accuracy was not.',
+    'The situation has worsened creatively.','Someone should really intervene here.',
+        'This is technically still a fight.','Both fighters briefly question their life choices.',
+    'The audience pretends not to see that.','A bird watches from a nearby tree. Also confused.',
+    'Somewhere, a therapist just got a new client.','This is fine. Everything is fine.',
+    'The referee has stopped making eye contact.','Historians will not record this moment.',
+    'A child in the crowd starts crying.','Even the chaos is embarrassed.',
+    'The ground itself seems uncomfortable.','Local authorities have been alerted.',
+    'Insurance does not cover this.','Witnesses will deny being here.',
+    'The vibe has shifted. Not in a good way.','Somehow, this is still legal.',
+    'The narrator requests hazard pay.','Both fighters smell terrible. This is canon.',
+    'Skill issue detected. On both sides.','The power of friendship is nowhere to be found.',
+  ],
+  bigHit: [
+    'DEVASTATING. The crowd gasps.','That one was FELT. In multiple dimensions.',
+    'Critical damage! The arena shakes!','The sound of that hit will echo in nightmares.',
+  ],
+  bigMiss: [
+    'Swung with the confidence of someone who has never missed. They have.',
+    'The attack goes so wide it nearly hits the audience.',
+    'Not even close. Like, geographically.','The wind from that miss was impressive though.',
+  ],
+  lowHp: [
+    'Hanging on by a thread. And vibes.','One more hit and it\'s over. Probably.',
+    'Health critical. Dignity already gone.','The screen is flashing red.',
+  ],
+  victory: [
+    'And THAT\'S the game! Someone call an ambulance.','VICTORY! The crowd is mostly confused.',
+    'Winner declared! The other one is just lying there.','It\'s over. Finally. Sweet mercy.',
+  ],
+  clarityWin: [
+    'MAXIMUM CLARITY! They have transcended the chaos!',
+    'ENLIGHTENMENT ACHIEVED! They see through the madness!',
+    'CLARITY OVERLOAD! They have become the main character!',
+  ],
+};
+
+// === MOCK API ===
+const mockAPI = {
+  async register(username, password) {
+    await delay(300 + Math.random() * 500);
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    if (users[username]) throw new Error('Username already exists');
+    users[username] = { 
+      password, 
+      stats: { wins: 0, losses: 0, totalDamage: 0, favoriteClass: null, winStreak: 0, currentStreak: 0 }, 
+      mastery: {}, 
+      matchHistory: [], 
+      discoveredCombos: [] 
+    };
+    localStorage.setItem('cc_users', JSON.stringify(users));
+    return { token: 'token_' + username + '_' + Date.now(), username };
+  },
+  
+  async login(username, password) {
+    await delay(300 + Math.random() * 500);
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    if (!users[username] || users[username].password !== password) throw new Error('Invalid credentials');
+    return { token: 'token_' + username + '_' + Date.now(), username };
+  },
+  
+  async getProfile(username) {
+    await delay(200);
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    return users[username] || null;
+  },
+  
+  async updateProfile(username, data) {
+    await delay(200);
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    if (users[username]) {
+      users[username] = { ...users[username], ...data };
+      localStorage.setItem('cc_users', JSON.stringify(users));
+    }
+    return users[username];
+  },
+  
+  async saveMatch(username, matchData) {
+    await delay(200);
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    if (users[username]) {
+      users[username].matchHistory = users[username].matchHistory || [];
+      users[username].matchHistory.unshift({ ...matchData, timestamp: Date.now() });
+      if (users[username].matchHistory.length > 50) users[username].matchHistory.pop();
+      
+      if (matchData.won) {
+        users[username].stats.wins++;
+        users[username].stats.currentStreak++;
+        users[username].stats.winStreak = Math.max(users[username].stats.winStreak, users[username].stats.currentStreak);
+      } else {
+        users[username].stats.losses++;
+        users[username].stats.currentStreak = 0;
+      }
+      users[username].stats.totalDamage += matchData.damageDealt || 0;
+      
+      const charName = matchData.playerChar;
+      users[username].mastery = users[username].mastery || {};
+      users[username].mastery[charName] = users[username].mastery[charName] || { xp: 0, level: 1 };
+      const xpGain = matchData.won ? 100 : 40;
+      users[username].mastery[charName].xp += xpGain + (matchData.combosUsed || 0) * 20;
+      
+      const xpThresholds = [0, 200, 500, 1000, 2000];
+      const currentXp = users[username].mastery[charName].xp;
+      for (let i = 4; i >= 1; i--) {
+        if (currentXp >= xpThresholds[i]) {
+          users[username].mastery[charName].level = i + 1;
+          break;
+        }
+      }
+      
+      localStorage.setItem('cc_users', JSON.stringify(users));
+      this.updateLeaderboard(username, users[username].stats);
+    }
+    return true;
+  },
+  
+  async updateLeaderboard(username, stats) {
+    const lb = JSON.parse(localStorage.getItem('cc_leaderboard') || '[]');
+    const existing = lb.findIndex(e => e.username === username);
+    const entry = { username, wins: stats.wins, losses: stats.losses, winStreak: stats.winStreak };
+    if (existing >= 0) lb[existing] = entry;
+    else lb.push(entry);
+    lb.sort((a, b) => b.wins - a.wins);
+    localStorage.setItem('cc_leaderboard', JSON.stringify(lb.slice(0, 100)));
+  },
+  
+  async getLeaderboard() {
+    await delay(300);
+    let lb = JSON.parse(localStorage.getItem('cc_leaderboard') || '[]');
+    if (lb.length < 5) {
+      const dummyNames = ['ChaosKing420', 'xX_Clarity_Xx', 'GoblinSlayer99', 'BenzoMaster', 'FairyDust'];
+      dummyNames.forEach((name, i) => {
+        if (!lb.find(e => e.username === name)) {
+          lb.push({ username: name, wins: 50 - i * 8, losses: 20 + i * 3, winStreak: 10 - i });
+        }
+      });
+      lb.sort((a, b) => b.wins - a.wins);
+      localStorage.setItem('cc_leaderboard', JSON.stringify(lb));
+    }
+    return lb.slice(0, 10);
+  },
+  
+  async getMatchHistory(username) {
+    await delay(200);
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    return users[username]?.matchHistory || [];
+  },
+  
+  async discoverCombo(username, comboName) {
+    const users = JSON.parse(localStorage.getItem('cc_users') || '{}');
+    if (users[username]) {
+      users[username].discoveredCombos = users[username].discoveredCombos || [];
+      if (!users[username].discoveredCombos.includes(comboName)) {
+        users[username].discoveredCombos.push(comboName);
+        localStorage.setItem('cc_users', JSON.stringify(users));
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+// === WEEKLY MODIFIERS ===
+function getWeeklyModifiers() {
+  const week = getWeekNumber();
+  const seed = week * 12345;
+  const rng = (n) => ((seed * (n + 1) * 9301 + 49297) % 233280) / 233280;
+  
+  const indices = CHARACTERS.map((_, i) => i);
+  const buffed = [];
+  const nerfed = [];
+  
+  const tempIndices = [...indices];
+  for (let i = 0; i < 2; i++) {
+    const buffIdx = Math.floor(rng(i) * tempIndices.length);
+    buffed.push(tempIndices.splice(buffIdx, 1)[0]);
+  }
+  for (let i = 0; i < 2; i++) {
+    const nerfIdx = Math.floor(rng(i + 10) * tempIndices.length);
+    nerfed.push(tempIndices.splice(nerfIdx, 1)[0]);
+  }
+  
+  return { buffed, nerfed, week };
+}
+
+// === GAME STATE ===
+let STATE = {
+  phase: 'select',
+  player: null,
+  enemy: null,
+  chaos: 10,
+  clarity: 10,
+  turn: 0,
+  log: [],
+  logId: 0,
+  currentEvent: null,
+  currentActor: 'player',
+  playerGoesFirst: true,
+  inputLocked: false,
+  turnTimer: null,
+  turnTimeLeft: 15,
+  weeklyMods: getWeeklyModifiers(),
+  user: null,
+  matchId: null,
+  replayData: [],
+  chaosMode: false,
+};
+
+// === ANIMATION MANAGER ===
+const AnimationManager = {
+  queue: [],
+  isPlaying: false,
+  
+  async play(animations) {
+    this.queue.push(...animations);
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    
+    while (this.queue.length > 0) {
+      const anim = this.queue.shift();
+      await this.execute(anim);
+    }
+    
+    this.isPlaying = false;
+  },
+  
+  async execute(anim) {
+    switch (anim.type) {
+      case 'delay': await delay(anim.duration); break;
+      case 'log': addLog(anim.text, anim.logType); render(); break;
+      case 'damage': await this.animateDamage(anim); break;
+      case 'heal': await this.animateHeal(anim); break;
+      case 'miss': await this.animateMiss(anim); break;
+      case 'status': await this.animateStatus(anim); break;
+      case 'move': await this.animateMove(anim); break;
+      case 'event': await this.animateEvent(anim); break;
+      case 'crit': await this.animateCrit(anim); break;
+      case 'combo': await this.animateCombo(anim); break;
+      case 'render': render(); break;
+    }
+  },
+  
+  async animateDamage({ target, damage, isCrit }) {
+    const section = document.querySelector(target === 'player' ? '.hp-section:last-of-type' : '.hp-section.hp-bar-enemy');
+    const portrait = document.querySelector(target === 'player' ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+    
+    if (section) {
+      section.classList.add('shake');
+      const floater = document.createElement('div');
+      floater.className = 'floating-damage' + (isCrit ? ' crit' : '');
+      floater.textContent = '-' + damage;
+      section.appendChild(floater);
+      setTimeout(() => {
+        section.classList.remove('shake');
+        floater.remove();
+      }, 1000);
+    }
+    
+    if (portrait) {
+      portrait.classList.add('shake');
+      setTimeout(() => portrait.classList.remove('shake'), 300);
+    }
+    
+    if (isCrit) {
+      this.screenFlash();
+      AudioManager.playCrit();
+    } else {
+      AudioManager.playHit();
+    }
+    
+    render();
+    await delay(500);
+  },
+  
+  async animateHeal({ target, amount }) {
+    const section = document.querySelector(target === 'player' ? '.hp-section:last-of-type' : '.hp-section.hp-bar-enemy');
+    const portrait = document.querySelector(target === 'player' ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+    
+    if (section) {
+      const floater = document.createElement('div');
+      floater.className = 'floating-damage heal';
+      floater.textContent = '+' + amount;
+      section.appendChild(floater);
+      setTimeout(() => floater.remove(), 1000);
+    }
+    
+    if (portrait) {
+      portrait.classList.add('pulse');
+      setTimeout(() => portrait.classList.remove('pulse'), 500);
+    }
+    
+    this.showHealParticles(target);
+    AudioManager.playHeal();
+    render();
+    await delay(400);
+  },
+  
+  async animateMiss({ target }) {
+    const portrait = document.querySelector(target === 'player' ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+    if (portrait) {
+      portrait.classList.add('fade');
+      setTimeout(() => portrait.classList.remove('fade'), 300);
+    }
+    AudioManager.playMiss();
+    await delay(300);
+  },
+  
+  async animateStatus({ target, status }) {
+    const def = STATUS_DEFS[status];
+    if (!def) return;
+    
+    const section = document.querySelector(target === 'player' ? '.hp-section:last-of-type' : '.hp-section.hp-bar-enemy');
+    if (section) {
+      const pop = document.createElement('div');
+      pop.className = 'status-pop';
+      pop.textContent = def.emoji;
+      pop.style.left = '50%';
+      pop.style.bottom = '20px';
+      section.style.position = 'relative';
+      section.appendChild(pop);
+      setTimeout(() => pop.remove(), 800);
+    }
+    
+    render();
+    await delay(300);
+  },
+  
+  // FIX: Renamed inner variable to avoid shadowing
+  async animateMove({ attacker, defender, move, tags }) {
+    const animContainer = document.getElementById('moveAnimation');
+    animContainer.innerHTML = '';
+    
+    const isPlayerAttacker = attacker === 'player';
+    const startX = isPlayerAttacker ? '20%' : '80%';
+    
+    if (tags.includes('projectile')) {
+      const projectiles = ['🔮', '💎', '🍾', '⚡', '💀', '🌟'];
+      const proj = document.createElement('div');
+      proj.className = 'projectile';
+      proj.textContent = pick(projectiles);
+      proj.style.left = startX;
+      proj.style.top = '40%';
+      proj.style.transform = 'translateX(' + (isPlayerAttacker ? '' : '-') + '300px)';
+      animContainer.appendChild(proj);
+      
+      requestAnimationFrame(() => {
+        proj.style.transition = 'transform 0.4s ease-out, opacity 0.4s';
+        proj.style.transform = 'translateX(0px)';
+      });
+    }
+    
+    if (tags.includes('speed')) {
+      const trail = document.createElement('div');
+      trail.className = 'dash-trail';
+      trail.style.left = startX;
+      trail.style.top = '45%';
+      trail.innerHTML = '💨💨💨';
+      animContainer.appendChild(trail);
+    }
+    
+    if (tags.includes('stealth')) {
+      const portrait = document.querySelector(isPlayerAttacker ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+      if (portrait) {
+        portrait.style.opacity = '0.3';
+        setTimeout(() => portrait.style.opacity = '1', 400);
+      }
+    }
+    
+    // FIX: Use gameContainer instead of shadowing container variable
+    if (tags.includes('sloppy')) {
+      const gameContainer = document.querySelector('.game-container');
+      if (gameContainer) {
+        gameContainer.classList.add('screen-wobble');
+        setTimeout(() => gameContainer.classList.remove('screen-wobble'), 400);
+      }
+    }
+    
+    const char = isPlayerAttacker ? STATE.player : STATE.enemy;
+    if (char) AudioManager.playClassSound(char.name);
+    
+    await delay(400);
+    animContainer.innerHTML = '';
+  },
+  
+  async animateEvent({ name }) {
+    AudioManager.playEvent();
+    await delay(200);
+  },
+  
+  async animateCrit() {
+    this.screenFlash();
+    AudioManager.playCrit();
+    await delay(200);
+  },
+  
+  async animateCombo({ level }) {
+    AudioManager.playCombo(level);
+    await delay(300);
+  },
+  
+  screenFlash() {
+    const flash = document.getElementById('screenFlash');
+    if (flash) {
+      flash.classList.add('active');
+      setTimeout(() => flash.classList.remove('active'), 100);
+    }
+  },
+  
+  showHealParticles(target) {
+    const animContainer = document.getElementById('moveAnimation');
+    const isPlayer = target === 'player';
+    const particles = document.createElement('div');
+    particles.className = 'heal-particles';
+    particles.style.left = isPlayer ? '25%' : '75%';
+    particles.style.top = '40%';
+    particles.innerHTML = '✨💚✨💚✨';
+    animContainer.appendChild(particles);
+    setTimeout(() => particles.remove(), 600);
+  }
+};
+
+// === PARTICLE BACKGROUND ===
+function initParticles() {
+  const container = document.getElementById('particles');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < 20; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = (Math.random() * 100) + '%';
+    particle.style.animationDelay = (Math.random() * 8) + 's';
+    particle.style.animationDuration = (6 + Math.random() * 4) + 's';
+    container.appendChild(particle);
+  }
+}
+// === CORE GAME FUNCTIONS ===
+function createFighter(template, isPlayer = true) {
+  const mods = STATE.weeklyMods;
+  const charIndex = CHARACTERS.findIndex(c => c.name === template.name);
+  
+  let dmgMod = 0, accMod = 0;
+  if (mods.buffed.includes(charIndex)) { dmgMod = Math.round(template.damage * 0.1); accMod = 5; }
+  if (mods.nerfed.includes(charIndex)) { dmgMod = -Math.round(template.damage * 0.1); accMod = -5; }
+  
+  let masteryBonus = { damage: 0, accuracy: 0 };
+  if (STATE.user && isPlayer) {
+    const mastery = STATE.user.mastery?.[template.name];
+    if (mastery) {
+      if (mastery.level >= 3) masteryBonus.damage = 2;
+      if (mastery.level >= 4) masteryBonus.accuracy = 5;
+    }
+  }
+  
+  if (STATE.chaosMode) dmgMod += 5;
+  
+  return {
+    ...template,
+    maxHp: template.hp,
+    damage: template.damage + dmgMod + masteryBonus.damage,
+    accuracy: template.accuracy + accMod + masteryBonus.accuracy,
+    tempDamage: 0, tempDef: 0, tempAcc: 0, tempEva: 0,
+    statuses: [],
+    cooldowns: template.moves.map(() => 0),
+    totalDmgDealt: 0, totalDmgTaken: 0, movesUsed: 0, hits: 0, misses: 0,
+    comboChain: [],
+    comboMultiplier: 1.0,
+    lastMoveIndex: -1,
+    lastMoveTags: [],
+    isBuffed: mods.buffed.includes(charIndex),
+    isNerfed: mods.nerfed.includes(charIndex),
+  };
+}
+
+function getEffective(fighter, stat, chaos, clarity) {
+  let val = fighter[stat];
+  const mods = { damage:'tempDamage', defense:'tempDef', accuracy:'tempAcc', evasion:'tempEva' };
+  if (mods[stat]) val += fighter[mods[stat]];
+  for (const s of fighter.statuses) {
+    const def = STATUS_DEFS[s.id];
+    if (def && def.statMod[stat]) val += def.statMod[stat];
+  }
+  return val;
+}
+
+function addStatus(fighter, statusId, turns) {
+  if (!STATUS_DEFS[statusId]) return;
+  if (fighter.name === 'Benzo Elf' && statusId === 'confused') return;
+  
+  const existing = fighter.statuses.find(s => s.id === statusId);
+  if (existing) { existing.turns = Math.max(existing.turns, turns); return; }
+  fighter.statuses.push({ id: statusId, turns });
+}
+
+function tickStatuses(fighter) {
+  const log = [];
+  for (const s of fighter.statuses) {
+    const def = STATUS_DEFS[s.id];
+    if (def && def.dot > 0) {
+      fighter.hp = Math.max(1, fighter.hp - def.dot);
+      log.push({ text: '  ' + def.emoji + ' ' + fighter.name + ' takes ' + def.dot + ' ' + def.name + ' damage!', type: 'status' });
+    }
+    s.turns--;
+    if (s.turns <= 0) {
+      log.push({ text: '  ' + def.emoji + ' ' + fighter.name + '\'s ' + def.name + ' wore off.', type: 'status' });
+    }
+  }
+  fighter.statuses = fighter.statuses.filter(s => s.turns > 0);
+  return log;
+}
+
+// FIX: applyPassive now properly modifies STATE.clarity for both player AND enemy Coke Bard
+function applyPassive(fighter, chaos, isPlayer) {
+  const n = fighter.name;
+  if (n === 'Crack Fairy' && fighter.hp < fighter.maxHp * 0.4) fighter.tempEva += 10;
+  if (n === 'Meth Wizard' && chaos > 60) fighter.tempDamage += 8;
+  if (n === 'Coke Bard') {
+    // FIX: Directly modify STATE.clarity instead of returning a value
+    STATE.clarity = clamp(STATE.clarity + 5, 0, 100);
+  }
+  if (n === 'Drunken Dwarf' && fighter.hp > fighter.maxHp * 0.6) fighter.tempDef += 3;
+  if (n === 'Heroin Gnome' && fighter.hp < fighter.maxHp * 0.3) fighter.tempDef += 4;
+  if (n === 'Ass Goblin') fighter.tempDamage += Math.floor(chaos / 10);
+}
+
+function resolveTagInteraction(atkTags, defTags) {
+  let best = null;
+  for (const at of atkTags) {
+    for (const dt of defTags) {
+      const key = at + '|' + dt;
+      if (TAG_MATRIX[key]) {
+        if (!best || TAG_MATRIX[key].dmgMult > best.dmgMult) best = { ...TAG_MATRIX[key], atkTag: at, defTag: dt };
+      }
+    }
+  }
+  return best;
+}
+
+function calculateCritChance(attacker, chaos, clarity, comboMult, hasTagAdvantage) {
+  let critChance = 8;
+  critChance += clarity * 0.1;
+  critChance += (comboMult - 1) * 50;
+  if (hasTagAdvantage) critChance += 10;
+  if (STATE.chaosMode) critChance += 20;
+  return clamp(critChance, 5, 50);
+}
+
+// FIX: updateCombo is only called ONCE per attack now (after hit is determined)
+function updateCombo(fighter, moveIndex, move, hit) {
+  if (!hit && move.damage > 0) {
+    fighter.comboChain = [];
+    fighter.comboMultiplier = 1.0;
+    return { reset: true };
+  }
+  
+  fighter.comboChain.push(moveIndex);
+  if (fighter.comboChain.length > 5) fighter.comboChain.shift();
+  
+  if (fighter.lastMoveTags.length > 0 && move.tags.length > 0) {
+    const sharedTag = move.tags.find(t => fighter.lastMoveTags.includes(t));
+    if (sharedTag) {
+      fighter.comboMultiplier = Math.min(1.3, fighter.comboMultiplier + 0.15);
+    } else {
+      fighter.comboMultiplier = 1.0;
+    }
+  }
+  
+  const charTemplate = CHARACTERS.find(c => c.name === fighter.name);
+  let comboTriggered = null;
+  
+  if (charTemplate && charTemplate.combos) {
+    for (const combo of charTemplate.combos) {
+      const chainEnd = fighter.comboChain.slice(-combo.sequence.length);
+      if (chainEnd.length === combo.sequence.length && 
+          chainEnd.every((m, i) => m === combo.sequence[i])) {
+        comboTriggered = combo;
+        break;
+      }
+    }
+  }
+  
+  fighter.lastMoveIndex = moveIndex;
+  fighter.lastMoveTags = [...move.tags];
+  
+  return { comboTriggered, multiplier: fighter.comboMultiplier };
+}
+
+function getComboHint(fighter) {
+  const charTemplate = CHARACTERS.find(c => c.name === fighter.name);
+  if (!charTemplate || !charTemplate.combos) return null;
+  
+  for (const combo of charTemplate.combos) {
+    if (fighter.comboChain.length > 0) {
+      const lastMove = fighter.comboChain[fighter.comboChain.length - 1];
+      if (combo.sequence[0] === lastMove && combo.sequence.length > 1) {
+        return { nextMoveIndex: combo.sequence[1], comboName: combo.name };
+      }
+    }
+  }
+  return null;
+}
+
+function resolveAttack(attacker, defender, move, chaos, clarity, isPlayer) {
+  const notes = [];
+  const animations = [];
+  
+  const atkDmg = getEffective(attacker, 'damage', chaos, clarity);
+  const atkAcc = getEffective(attacker, 'accuracy', chaos, clarity);
+  const defDef = getEffective(defender, 'defense', chaos, clarity);
+  const defEva = getEffective(defender, 'evasion', chaos, clarity);
+  
+  const defTags = defender.lastMoveTags || [];
+  const tagResult = resolveTagInteraction(move.tags, defTags);
+  let dmgMult = 1.0, accBonus = 0;
+  if (tagResult) {
+    dmgMult = tagResult.dmgMult;
+    accBonus = tagResult.accBonus;
+    notes.push(tagResult.note);
+  }
+  
+  let counterBonus = false;
+  if (defTags.includes('sloppy') && move.tags.includes('speed')) {
+    counterBonus = true;
+    dmgMult += 0.5;
+    notes.push('Counter window! Speed exploits sloppy!');
+  }
+  
+  dmgMult *= attacker.comboMultiplier;
+  
+  if (chaos > 30) {
+    const variance = (chaos / 100) * 0.35;
+    const roll = (Math.random() - 0.5) * 2 * variance;
+    dmgMult += roll;
+    if (roll > 0.12) notes.push('Chaos fuels extra damage!');
+    if (roll < -0.12) notes.push('Chaos backfires!');
+  }
+  
+  const clarityAcc = isPlayer ? clarity * 0.2 : (100 - clarity) * 0.1;
+  const finalAcc = clamp(move.accuracy + (atkAcc - 50) + accBonus + clarityAcc - chaos * 0.08, 5, 97);
+  const finalEva = clamp(defEva, 0, 60);
+  
+  const hitRoll = Math.random() * 100;
+  const evaRoll = Math.random() * 100;
+  const hit = hitRoll < finalAcc && evaRoll >= finalEva;
+  
+  const critChance = calculateCritChance(attacker, chaos, clarity, attacker.comboMultiplier, !!tagResult);
+  const isCrit = hit && move.damage > 0 && Math.random() * 100 < critChance;
+  if (isCrit) {
+    dmgMult *= 1.8;
+    notes.push('⚡ CRITICAL HIT!');
+  }
+  
+  let totalDmg = 0;
+  if (hit && move.damage > 0) {
+    const base = move.damage + atkDmg;
+    const reduced = Math.max(1, base - defDef);
+    totalDmg = Math.max(1, Math.round(reduced * dmgMult));
+    
+    if (move.tags.includes('sloppy') && chance(12)) {
+      const selfDmg = Math.round(move.damage * 0.15);
+      attacker.hp = Math.max(1, attacker.hp - selfDmg);
+      notes.push('Took ' + selfDmg + ' self-damage from being sloppy!');
+    }
+    
+    if (move.statusApply) {
+      if (defender.name === 'Benzo Elf' && move.statusApply === 'confused') {
+        notes.push('Benzo Elf is too calm to be confused!');
+      } else {
+        addStatus(defender, move.statusApply, 2);
+        animations.push({ type: 'status', target: isPlayer ? 'enemy' : 'player', status: move.statusApply });
+      }
+    }
+    
+    if (defender.name === 'Heroin Gnome' && defender.hp < defender.maxHp * 0.3) {
+      totalDmg = Math.max(1, Math.round(totalDmg * 0.85));
+      notes.push('Pain Immunity absorbs some damage!');
+    }
+    
+    if (defender.name === 'Benzo Elf' && !isPlayer) {
+      STATE.clarity = clamp(STATE.clarity + 5, 0, 100);
+      notes.push('Benzo Elf gains clarity from the hit!');
+    }
+    
+    defender.hp = Math.max(0, defender.hp - totalDmg);
+    attacker.totalDmgDealt += totalDmg;
+    defender.totalDmgTaken += totalDmg;
+    attacker.hits++;
+  } else if (!hit) {
+    attacker.misses++;
+    if (move.damage === 0 && move.statusApply) {
+      if (defender.name === 'Benzo Elf' && move.statusApply === 'confused') {
+        notes.push('Benzo Elf shrugs it off!');
+      } else {
+        addStatus(defender, move.statusApply, 2);
+        animations.push({ type: 'status', target: isPlayer ? 'enemy' : 'player', status: move.statusApply });
+      }
+    }
+  }
+  
+  if (move.heal) {
+    attacker.hp = Math.min(attacker.maxHp, attacker.hp + move.heal);
+    notes.push('Healed ' + move.heal + ' HP!');
+    animations.push({ type: 'heal', target: isPlayer ? 'player' : 'enemy', amount: move.heal });
+  }
+  
+  attacker.movesUsed++;
+  
+  return { hit, damage: totalDmg, notes, finalAcc: Math.round(finalAcc), isCrit, animations };
+}
+
+function determineInitiative(player, enemy, chaos) {
+  const pSpd = getEffective(player, 'speed', chaos, 50) + (Math.random() * 20 - 10);
+  const eSpd = getEffective(enemy, 'speed', chaos, 50) + (Math.random() * 20 - 10);
+  if (chaos > 70 && chance(25)) return chance(50);
+  return pSpd >= eSpd;
+}
+
+function resetState() {
+  STATE = {
+    phase: 'select',
+    player: null,
+    enemy: null,
+    chaos: 10,
+    clarity: 10,
+    turn: 0,
+    log: [],
+    logId: 0,
+    currentEvent: null,
+    currentActor: 'player',
+    playerGoesFirst: true,
+    inputLocked: false,
+    turnTimer: null,
+    turnTimeLeft: 15,
+    weeklyMods: getWeeklyModifiers(),
+    user: STATE.user,
+    matchId: null,
+    replayData: [],
+    chaosMode: STATE.chaosMode,
+  };
+  AudioManager.stopBackgroundLoop();
+}
+
+function addLog(text, type) {
+  STATE.log.push({ id: ++STATE.logId, text, type });
+}
+
+// === TURN EXECUTION ===
+async function selectCharacter(charIndex) {
+  AudioManager.init();
+  AudioManager.resume();
+  
+  const template = CHARACTERS[charIndex];
+  const enemyPool = CHARACTERS.filter(c => c.name !== template.name);
+  const enemyTemplate = pick(enemyPool);
+  
+  STATE.player = createFighter(template, true);
+  STATE.enemy = createFighter(enemyTemplate, false);
+  STATE.phase = 'battle';
+  STATE.turn = 1;
+  STATE.chaos = STATE.chaosMode ? 50 : 10;
+  STATE.clarity = 10;
+  STATE.log = [];
+  STATE.logId = 0;
+  STATE.inputLocked = false;
+  STATE.matchId = 'match_' + Date.now();
+  STATE.replayData = [];
+  
+  STATE.playerGoesFirst = determineInitiative(STATE.player, STATE.enemy, STATE.chaos);
+  STATE.currentActor = STATE.playerGoesFirst ? 'player' : 'enemy';
+  
+  addLog(template.emoji + ' ' + template.name + ' vs ' + enemyTemplate.emoji + ' ' + enemyTemplate.name, 'system');
+  addLog('"' + template.description + '"', 'commentary');
+  addLog('────────── FIGHT! ──────────', 'system');
+  
+  const firstFighter = STATE.playerGoesFirst ? template : enemyTemplate;
+  addLog(firstFighter.emoji + ' ' + firstFighter.name + ' moves first!', 'system');
+  
+  AudioManager.startBackgroundLoop(STATE.chaos);
+  
+  render();
+  
+  if (STATE.currentActor === 'enemy') {
+    await delay(500);
+    await executeEnemyTurn();
+  } else {
+    startTurnTimer();
+  }
+}
+
+function startTurnTimer() {
+  if (STATE.turnTimer) clearInterval(STATE.turnTimer);
+  STATE.turnTimeLeft = 15;
+  
+  STATE.turnTimer = setInterval(() => {
+    STATE.turnTimeLeft--;
+    render();
+    
+    if (STATE.turnTimeLeft <= 0) {
+      clearInterval(STATE.turnTimer);
+      const availableMoves = STATE.player.moves
+        .map((m, i) => ({ m, i }))
+        .filter(x => STATE.player.cooldowns[x.i] <= 0);
+      if (availableMoves.length > 0) {
+        const randomMove = pick(availableMoves);
+        executePlayerTurn(randomMove.i);
+      }
+    }
+  }, 1000);
+}
+
+function stopTurnTimer() {
+  if (STATE.turnTimer) {
+    clearInterval(STATE.turnTimer);
+    STATE.turnTimer = null;
+  }
+}
+
+async function executePlayerTurn(moveIndex) {
+  if (STATE.phase !== 'battle' || STATE.inputLocked || STATE.currentActor !== 'player') return;
+  
+  STATE.inputLocked = true;
+  stopTurnTimer();
+  
+  const p = STATE.player;
+  const e = STATE.enemy;
+  const move = p.moves[moveIndex];
+  
+  STATE.replayData.push({ actor: 'player', moveIndex, turn: STATE.turn });
+  
+  p.tempDamage = 0; p.tempDef = 0; p.tempAcc = 0; p.tempEva = 0;
+  
+  // FIX: applyPassive now directly modifies STATE.clarity
+  applyPassive(p, STATE.chaos, true);
+  
+  if (move.cooldown > 0) p.cooldowns[moveIndex] = move.cooldown + 1;
+  
+  await AnimationManager.play([
+    { type: 'log', text: '', logType: 'turn-sep' },
+    { type: 'log', text: '══ Turn ' + STATE.turn + ' ══ (Your Turn)', logType: 'system' },
+    { type: 'delay', duration: 200 },
+  ]);
+  
+  addLog(p.emoji + ' ' + p.name + ' uses "' + move.name + '"', 'move');
+  addLog('  ↳ ' + move.desc, 'commentary');
+  render();
+  
+  await AnimationManager.play([
+    { type: 'move', attacker: 'player', defender: 'enemy', move: move.name, tags: move.tags },
+    { type: 'delay', duration: 300 },
+  ]);
+  
+  const result = resolveAttack(p, e, move, STATE.chaos, STATE.clarity, true);
+  
+  // FIX: Only call updateCombo ONCE, after we know the hit result
+  const comboResult = updateCombo(p, moveIndex, move, result.hit);
+  
+  if (result.hit && move.damage > 0) {
+    addLog('  💥 HIT! ' + result.damage + ' damage to ' + e.name + '! [' + result.finalAcc + '% acc]', result.isCrit ? 'crit' : 'damage');
+    if (result.isCrit) addLog('  ⚡ CRITICAL HIT!', 'crit');
+    if (result.damage > 25) addLog('  ' + pick(COMMENTARY.bigHit), 'commentary');
+    
+    await AnimationManager.play([
+      { type: 'damage', target: 'enemy', damage: result.damage, isCrit: result.isCrit },
+    ]);
+  } else if (move.damage > 0) {
+    addLog('  💨 MISS! ' + e.name + ' evades. [' + result.finalAcc + '% acc]', 'miss');
+    if (result.finalAcc > 70) addLog('  ' + pick(COMMENTARY.bigMiss), 'commentary');
+    
+    await AnimationManager.play([{ type: 'miss', target: 'enemy' }]);
+  }
+  
+  if (move.heal) {
+    addLog('  💚 ' + p.name + ' heals ' + move.heal + ' HP!', 'heal');
+  }
+  
+  for (const n of result.notes) addLog('  → ' + n, 'status');
+  
+  if (comboResult.comboTriggered) {
+    const combo = comboResult.comboTriggered;
+    addLog('  🔥 COMBO: ' + combo.name + '!', 'combo');
+    await AnimationManager.play([{ type: 'combo', level: 2 }]);
+    
+    if (STATE.user) {
+      const isNew = await mockAPI.discoverCombo(STATE.user.username, combo.name);
+      if (isNew) showComboDiscovery(combo.name);
+    }
+  } else if (p.comboMultiplier > 1) {
+    addLog('  🔗 Tag Momentum: x' + p.comboMultiplier.toFixed(1), 'combo');
+  }
+  
+  for (const anim of result.animations) {
+    await AnimationManager.play([anim]);
+  }
+  
+  STATE.chaos = clamp(STATE.chaos + move.chaos, 0, 100);
+  STATE.clarity = clamp(STATE.clarity + move.clarity, 0, 100);
+  AudioManager.updateBackgroundChaos(STATE.chaos);
+  updateArenaBackground();
+  
+  render();
+  
+  if (await checkWinConditions()) return;
+  
+  p.cooldowns = p.cooldowns.map(c => Math.max(0, c - 1));
+  
+  // FIX: Don't increment turn here - only when switching back to player
+  STATE.currentActor = 'enemy';
+  
+  await delay(500);
+  await executeEnemyTurn();
+}
+
+async function executeEnemyTurn() {
+  if (STATE.phase !== 'battle') return;
+  
+  STATE.inputLocked = true;
+  const p = STATE.player;
+  const e = STATE.enemy;
+  
+  e.tempDamage = 0; e.tempDef = 0; e.tempAcc = 0; e.tempEva = 0;
+  
+  // FIX: applyPassive now directly modifies STATE.clarity for enemy Coke Bard too
+  applyPassive(e, STATE.chaos, false);
+  
+  const availableMoves = e.moves.map((m, i) => ({ m, i })).filter(x => e.cooldowns[x.i] <= 0);
+  let aiChoice = availableMoves.length > 0 ? pick(availableMoves) : { m: e.moves[e.moves.length - 1], i: e.moves.length - 1 };
+  
+  if (e.hp < e.maxHp * 0.35) {
+    const healMove = availableMoves.find(x => x.m.heal && x.m.heal > 0);
+    if (healMove && chance(60)) aiChoice = healMove;
+  }
+  if (STATE.clarity > 65) {
+    const chaosMove = availableMoves.find(x => x.m.chaos > 10);
+    if (chaosMove && chance(50)) aiChoice = chaosMove;
+  }
+  
+  const move = aiChoice.m;
+  const moveIndex = aiChoice.i;
+  
+  STATE.replayData.push({ actor: 'enemy', moveIndex, turn: STATE.turn });
+  
+  if (move.cooldown > 0) e.cooldowns[moveIndex] = move.cooldown + 1;
+  
+  await AnimationManager.play([
+    { type: 'log', text: '', logType: 'turn-sep' },
+    { type: 'log', text: '══ Turn ' + STATE.turn + ' ══ (Enemy Turn)', logType: 'system' },
+    { type: 'delay', duration: 300 },
+  ]);
+  
+  addLog(e.emoji + ' ' + e.name + ' uses "' + move.name + '"', 'move');
+  addLog('  ↳ ' + move.desc, 'commentary');
+  render();
+  
+  await AnimationManager.play([
+    { type: 'move', attacker: 'enemy', defender: 'player', move: move.name, tags: move.tags },
+    { type: 'delay', duration: 300 },
+  ]);
+  
+  const result = resolveAttack(e, p, move, STATE.chaos, STATE.clarity, false);
+  
+  // FIX: Only call updateCombo ONCE for enemy too
+  updateCombo(e, moveIndex, move, result.hit);
+  
+  if (result.hit && move.damage > 0) {
+    addLog('  💥 HIT! ' + result.damage + ' damage to ' + p.name + '! [' + result.finalAcc + '% acc]', result.isCrit ? 'crit' : 'damage');
+    if (result.isCrit) addLog('  ⚡ CRITICAL HIT!', 'crit');
+    
+    await AnimationManager.play([
+      { type: 'damage', target: 'player', damage: result.damage, isCrit: result.isCrit },
+    ]);
+    
+    if (navigator.vibrate) navigator.vibrate([30]);
+  } else if (move.damage > 0) {
+    addLog('  💨 MISS! ' + p.name + ' evades.', 'miss');
+    await AnimationManager.play([{ type: 'miss', target: 'player' }]);
+  }
+  
+  if (move.heal) {
+    addLog('  💚 ' + e.name + ' heals ' + move.heal + ' HP!', 'heal');
+  }
+  
+  for (const n of result.notes) addLog('  → ' + n, 'status');
+  
+  for (const anim of result.animations) {
+    await AnimationManager.play([anim]);
+  }
+  
+  STATE.chaos = clamp(STATE.chaos + move.chaos, 0, 100);
+  STATE.clarity = clamp(STATE.clarity - Math.abs(move.clarity) * 0.4, 0, 100);
+  AudioManager.updateBackgroundChaos(STATE.chaos);
+  updateArenaBackground();
+  
+  render();
+  
+  if (await checkWinConditions()) return;
+  
+  await processEndOfRound();
+  
+  e.cooldowns = e.cooldowns.map(c => Math.max(0, c - 1));
+  
+  // FIX: Switch actor to player and increment turn ONLY HERE (once per round)
+  STATE.currentActor = 'player';
+  STATE.turn++;
+  
+  // FIX: Remove the re-evaluation of initiative that caused consecutive enemy turns
+  // Now it simply returns to player after enemy turn
+  
+  render();
+  STATE.inputLocked = false;
+  startTurnTimer();
+}
+
+async function processEndOfRound() {
+  const p = STATE.player, e = STATE.enemy;
+  
+  const pStatusLog = tickStatuses(p);
+  const eStatusLog = tickStatuses(e);
+  for (const l of [...pStatusLog, ...eStatusLog]) {
+    addLog(l.text, l.type);
+    await delay(100);
+  }
+  render();
+  
+  if (await checkWinConditions()) return;
+  
+  const eventChance = 15 + STATE.chaos * 0.45;
+  if (chance(eventChance)) {
+    const eligible = EVENTS.filter(ev => STATE.chaos >= ev.minChaos);
+    if (eligible.length > 0) {
+      const event = pick(eligible);
+      addLog('🎲 EVENT: ' + event.name, 'event');
+      addLog('  "' + event.desc + '"', 'event');
+      
+      await AnimationManager.play([{ type: 'event', name: event.name }]);
+      
+      event.effect(STATE);
+      STATE.chaos = clamp(STATE.chaos + event.chaosD, 0, 100);
+      STATE.clarity = clamp(STATE.clarity + event.clarityD, 0, 100);
+      
+      render();
+      await delay(500);
+    }
+  }
+  
+  if (await checkWinConditions()) return;
+  
+  if (chance(35)) addLog('📢 ' + pick(COMMENTARY.general), 'commentary');
+  if (p.hp < p.maxHp * 0.2 && chance(40)) addLog('📢 ' + pick(COMMENTARY.lowHp), 'commentary');
+  if (e.hp < e.maxHp * 0.2 && chance(40)) addLog('📢 ' + pick(COMMENTARY.lowHp), 'commentary');
+  
+  render();
+}
+
+async function checkWinConditions() {
+  const p = STATE.player, e = STATE.enemy;
+  
+  if (STATE.clarity >= 100) {
+    addLog('', 'turn-sep');
+    addLog('✨ ' + pick(COMMENTARY.clarityWin), 'system');
+    addLog('🏆 ' + p.name + ' wins by CLARITY TRANSCENDENCE!', 'system');
+    STATE.phase = 'gameover';
+    STATE.winner = 'player';
+    STATE.winType = 'clarity';
+    stopTurnTimer();
+    AudioManager.playVictory();
+    await saveMatchResult();
+    render();
+    return true;
+  }
+  if (e.hp <= 0) {
+    addLog('', 'turn-sep');
+    addLog(pick(COMMENTARY.victory), 'system');
+    addLog('🏆 ' + p.name + ' wins by KNOCKOUT!', 'system');
+    STATE.phase = 'gameover';
+    STATE.winner = 'player';
+    STATE.winType = 'knockout';
+    stopTurnTimer();
+    AudioManager.playVictory();
+    await saveMatchResult();
+    render();
+    return true;
+  }
+  if (p.hp <= 0) {
+    addLog('', 'turn-sep');
+    addLog('💀 ' + p.name + ' has fallen!', 'system');
+    addLog('☠️ ' + e.name + ' wins. ' + pick(COMMENTARY.victory), 'system');
+    STATE.phase = 'gameover';
+    STATE.winner = 'enemy';
+    STATE.winType = 'knockout';
+    stopTurnTimer();
+    AudioManager.playDefeat();
+    await saveMatchResult();
+    render();
+    return true;
+  }
+  return false;
+}
+
+async function saveMatchResult() {
+  if (!STATE.user) return;
+  
+  const matchData = {
+    playerChar: STATE.player.name,
+    enemyChar: STATE.enemy.name,
+    won: STATE.winner === 'player',
+    winType: STATE.winType,
+    turns: STATE.turn,
+    damageDealt: STATE.player.totalDmgDealt,
+    damageTaken: STATE.player.totalDmgTaken,
+    chaos: STATE.chaos,
+    clarity: STATE.clarity,
+    combosUsed: STATE.player.comboChain.length,
+  };
+  
+  await mockAPI.saveMatch(STATE.user.username, matchData);
+  STATE.user = await mockAPI.getProfile(STATE.user.username);
+}
+
+function updateArenaBackground() {
+  const chaos = STATE.chaos;
+  const r = Math.round(10 + chaos * 0.15);
+  const g = Math.round(10 - chaos * 0.05);
+  const b = Math.round(15 + (100 - chaos) * 0.1);
+  document.documentElement.style.setProperty('--chaos-intensity', chaos / 100);
+  const bg = document.querySelector('.arena-bg');
+  if (bg) {
+    bg.style.background = 'linear-gradient(135deg, rgb(' + r + ',' + g + ',' + b + ') 0%, rgb(' + (r+10) + ',' + (g+10) + ',' + (b+20) + ') 50%, rgb(' + r + ',' + g + ',' + b + ') 100%)';
+  }
+}
+// === MODAL SYSTEM ===
+let currentModal = null;
+
+function showModal(content) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = '<div class="modal" style="position:relative">' + content + '</div>';
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeModal();
+  };
+  document.body.appendChild(overlay);
+  currentModal = overlay;
+}
+
+function closeModal() {
+  if (currentModal) {
+    currentModal.remove();
+    currentModal = null;
+  }
+}
+
+function showComboDiscovery(comboName) {
+  const popup = document.createElement('div');
+  popup.className = 'combo-discovery';
+  popup.innerHTML = '<h3>✨ Combo Discovered!</h3><div style="font-size:1.2em;margin:8px 0">' + comboName + '</div><div style="font-size:0.8em;color:var(--dim)">+20 Mastery XP</div>';
+  document.body.appendChild(popup);
+  setTimeout(() => popup.remove(), 2000);
+}
+
+function showLoginModal() {
+  const content = '<h2>🎮 Login / Register</h2>' +
+    '<div class="modal-tabs">' +
+      '<div class="modal-tab active" onclick="switchAuthTab(\'login\')">Login</div>' +
+      '<div class="modal-tab" onclick="switchAuthTab(\'register\')">Register</div>' +
+    '</div>' +
+    '<div id="authForm">' +
+      '<div class="form-group"><label>Username</label><input type="text" id="authUsername" placeholder="Enter username"></div>' +
+      '<div class="form-group"><label>Password</label><input type="password" id="authPassword" placeholder="Enter password"></div>' +
+      '<div id="authError" class="form-error"></div>' +
+      '<div class="btn-row" style="margin-top:16px">' +
+        '<button class="btn btn-primary" onclick="submitAuth(\'login\')">Login</button>' +
+        '<button class="btn" onclick="playAsGuest()">Play as Guest</button>' +
+      '</div>' +
+    '</div>';
+  showModal(content);
+}
+
+window.switchAuthTab = function(tab) {
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'login') {
+    document.querySelector('.modal-tab:first-child').classList.add('active');
+  } else {
+    document.querySelector('.modal-tab:last-child').classList.add('active');
+  }
+  
+  const btnRow = document.querySelector('.modal .btn-row');
+  if (btnRow) {
+    btnRow.innerHTML = tab === 'login' 
+      ? '<button class="btn btn-primary" onclick="submitAuth(\'login\')">Login</button><button class="btn" onclick="playAsGuest()">Play as Guest</button>'
+      : '<button class="btn btn-primary" onclick="submitAuth(\'register\')">Register</button>';
+  }
+};
+
+window.submitAuth = async function(type) {
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errorEl = document.getElementById('authError');
+  
+  if (!username || !password) {
+    errorEl.textContent = 'Please fill in all fields';
+    return;
+  }
+  
+  try {
+    const result = type === 'login' 
+      ? await mockAPI.login(username, password)
+      : await mockAPI.register(username, password);
+    
+    localStorage.setItem('cc_token', result.token);
+    localStorage.setItem('cc_username', username);
+    STATE.user = await mockAPI.getProfile(username);
+    closeModal();
+    render();
+  } catch (e) {
+    errorEl.textContent = e.message;
+  }
+};
+
+window.playAsGuest = function() {
+  STATE.user = null;
+  localStorage.removeItem('cc_token');
+  localStorage.removeItem('cc_username');
+  closeModal();
+  render();
+};
+
+window.logout = function() {
+  STATE.user = null;
+  localStorage.removeItem('cc_token');
+  localStorage.removeItem('cc_username');
+  render();
+};
+
+async function showLeaderboard() {
+  const lb = await mockAPI.getLeaderboard();
+  const ranks = ['🥇', '🥈', '🥉'];
+  
+  let listHtml = '';
+  lb.forEach((e, i) => {
+    listHtml += '<li class="leaderboard-item">' +
+      '<span class="leaderboard-rank">' + (ranks[i] || (i + 1)) + '</span>' +
+      '<span class="leaderboard-name">' + e.username + '</span>' +
+      '<span class="leaderboard-stats">' + e.wins + 'W / ' + e.losses + 'L | 🔥' + e.winStreak + '</span>' +
+    '</li>';
+  });
+  
+  const content = '<h2>🏆 Leaderboard</h2>' +
+    '<ul class="leaderboard-list">' + listHtml + '</ul>' +
+    '<div class="btn-row" style="margin-top:16px"><button class="btn" onclick="closeModal()">Close</button></div>';
+  showModal(content);
+}
+
+async function showMatchHistory() {
+  if (!STATE.user) {
+    showModal('<h2>Login Required</h2><p>Please login to view match history.</p><div class="btn-row"><button class="btn" onclick="closeModal()">Close</button></div>');
+    return;
+  }
+  
+  const history = await mockAPI.getMatchHistory(STATE.user.username);
+  
+  let historyHtml = '';
+  if (history.length === 0) {
+    historyHtml = '<p style="text-align:center;color:var(--dim)">No matches yet</p>';
+  } else {
+    history.slice(0, 20).forEach(m => {
+      const pChar = CHARACTERS.find(c => c.name === m.playerChar);
+      const eChar = CHARACTERS.find(c => c.name === m.enemyChar);
+      historyHtml += '<div class="match-item">' +
+        '<div class="match-header">' +
+          '<span class="match-result ' + (m.won ? 'win' : 'loss') + '">' + (m.won ? '🏆 WIN' : '💀 LOSS') + '</span>' +
+          '<span style="font-size:0.75em;color:var(--dim)">' + new Date(m.timestamp).toLocaleDateString() + '</span>' +
+        '</div>' +
+        '<div class="match-details">' +
+          (pChar ? pChar.emoji : '') + ' ' + m.playerChar + ' vs ' +
+          (eChar ? eChar.emoji : '') + ' ' + m.enemyChar +
+          ' | ' + m.turns + ' turns | ' + m.damageDealt + ' dmg dealt | ' + m.winType +
+        '</div>' +
+      '</div>';
+    });
+  }
+  
+  const content = '<h2>📜 Match History</h2>' +
+    '<div style="max-height:400px;overflow-y:auto">' + historyHtml + '</div>' +
+    '<div class="btn-row" style="margin-top:16px"><button class="btn" onclick="closeModal()">Close</button></div>';
+  showModal(content);
+}
+
+async function showProfile() {
+  if (!STATE.user) {
+    showLoginModal();
+    return;
+  }
+  
+  const user = STATE.user;
+  const stats = user.stats || { wins: 0, losses: 0, winStreak: 0, totalDamage: 0 };
+  const mastery = user.mastery || {};
+  
+  let masteryHtml = '';
+  CHARACTERS.forEach(c => {
+    const m = mastery[c.name] || { level: 1, xp: 0 };
+    const xpThresholds = [0, 200, 500, 1000, 2000];
+    const nextThreshold = xpThresholds[m.level] || 2000;
+    const progress = Math.min(100, (m.xp / nextThreshold) * 100);
+    masteryHtml += '<div style="background:var(--surface2);padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">' +
+      '<span style="font-size:1.5em">' + c.emoji + '</span>' +
+      '<div style="flex:1">' +
+        '<div style="font-size:0.8em;font-weight:600">' + c.name + (m.level >= 5 ? ' ⭐' : '') + '</div>' +
+        '<div style="height:4px;background:var(--surface);border-radius:2px;margin-top:4px">' +
+          '<div style="height:100%;width:' + progress + '%;background:var(--yellow);border-radius:2px"></div>' +
+        '</div>' +
+      '</div>' +
+      '<span style="font-size:0.75em;color:var(--dim)">Lv.' + m.level + '</span>' +
+    '</div>';
+  });
+  
+  const content = '<h2>👤 ' + (user.username || 'Profile') + '</h2>' +
+    '<div class="profile-stats">' +
+      '<div class="profile-stat"><div class="value">' + stats.wins + '</div><div class="label">Wins</div></div>' +
+      '<div class="profile-stat"><div class="value">' + stats.losses + '</div><div class="label">Losses</div></div>' +
+      '<div class="profile-stat"><div class="value">' + stats.winStreak + '</div><div class="label">Best Streak</div></div>' +
+      '<div class="profile-stat"><div class="value">' + stats.totalDamage + '</div><div class="label">Total Damage</div></div>' +
+    '</div>' +
+    '<h3 style="margin:16px 0 8px;font-size:0.9em;color:var(--dim)">Class Mastery</h3>' +
+    '<div style="display:grid;gap:8px">' + masteryHtml + '</div>' +
+    '<div class="btn-row" style="margin-top:16px">' +
+      '<button class="btn" onclick="closeModal()">Close</button>' +
+      '<button class="btn" style="color:var(--red)" onclick="logout();closeModal()">Logout</button>' +
+    '</div>';
+  showModal(content);
+}
+
+function showStrategyGuide() {
+  const selectedChar = STATE.player || CHARACTERS[0];
+  const charTemplate = CHARACTERS.find(c => c.name === selectedChar.name) || CHARACTERS[0];
+  
+  let combosHtml = '';
+  if (charTemplate.combos && charTemplate.combos.length > 0) {
+    charTemplate.combos.forEach(c => {
+      combosHtml += '<div style="background:var(--surface2);padding:8px;border-radius:6px;margin-bottom:6px">' +
+        '<div style="color:var(--yellow);font-weight:700;font-size:0.85em">' + c.name + '</div>' +
+        '<div style="font-size:0.75em;color:var(--dim)">' + c.desc + '</div>' +
+      '</div>';
+    });
+  } else {
+    combosHtml = '<div style="color:var(--dim);font-size:0.8em">No combos available</div>';
+  }
+  
+  const content = '<h2>📖 Strategy Guide</h2>' +
+    '<div class="strategy-section">' +
+      '<h3>' + charTemplate.emoji + ' ' + charTemplate.name + ' Combos</h3>' +
+      combosHtml +
+    '</div>' +
+    '<div class="strategy-section">' +
+      '<h3>🏷️ Tag Interactions</h3>' +
+      '<div class="tag-matrix">' +
+        '<div class="cell header"></div>' +
+        '<div class="cell header">Speed</div>' +
+        '<div class="cell header">Stealth</div>' +
+        '<div class="cell header">Sloppy</div>' +
+        '<div class="cell header">Proj</div>' +
+        '<div class="cell header">Speed</div>' +
+        '<div class="cell neutral">-</div>' +
+        '<div class="cell bad">-10%</div>' +
+        '<div class="cell good">+50%</div>' +
+        '<div class="cell neutral">+5acc</div>' +
+        '<div class="cell header">Stealth</div>' +
+        '<div class="cell bad">-20%</div>' +
+        '<div class="cell neutral">-</div>' +
+        '<div class="cell good">+30%</div>' +
+        '<div class="cell good">+20%</div>' +
+        '<div class="cell header">Sloppy</div>' +
+        '<div class="cell bad">-20%</div>' +
+        '<div class="cell good">+20%</div>' +
+        '<div class="cell neutral">-</div>' +
+        '<div class="cell neutral">+10%</div>' +
+        '<div class="cell header">Proj</div>' +
+        '<div class="cell neutral">-5acc</div>' +
+        '<div class="cell bad">-30%</div>' +
+        '<div class="cell good">+40%</div>' +
+        '<div class="cell neutral">-</div>' +
+      '</div>' +
+      '<div style="font-size:0.65em;color:var(--dim);margin-top:8px;text-align:center">Attacker (rows) vs Defender\'s last move (columns)</div>' +
+    '</div>' +
+    '<div class="strategy-section">' +
+      '<h3>💡 Tips</h3>' +
+      '<ul style="font-size:0.8em;color:var(--dim);padding-left:20px">' +
+        '<li>Use Speed moves against Sloppy defenders for +50% damage</li>' +
+        '<li>Chain same-tag moves for Tag Momentum bonus</li>' +
+        '<li>High Clarity increases crit chance</li>' +
+        '<li>Watch for Counter Windows when enemy uses Sloppy</li>' +
+        '<li>Clarity at 100 = instant win!</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:16px"><button class="btn" onclick="closeModal()">Close</button></div>';
+  showModal(content);
+}
+
+function showSettings() {
+  const soundStatus = AudioManager.muted ? '🔇 Off' : '🔊 On';
+  const chaosStatus = STATE.chaosMode ? '🔥 On' : '❄️ Off';
+  
+  const content = '<h2>⚙️ Settings</h2>' +
+    '<div style="display:flex;flex-direction:column;gap:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface2);border-radius:8px">' +
+        '<span>Sound Effects</span>' +
+        '<button class="btn btn-small" onclick="toggleSound(this)">' + soundStatus + '</button>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface2);border-radius:8px">' +
+        '<span>Chaos Mode</span>' +
+        '<button class="btn btn-small" onclick="toggleChaosMode(this)">' + chaosStatus + '</button>' +
+      '</div>' +
+      '<div style="padding:8px;font-size:0.75em;color:var(--dim);text-align:center">Chaos Mode: Double chaos generation, +20% crit chance</div>' +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:16px"><button class="btn" onclick="closeModal()">Close</button></div>';
+  showModal(content);
+}
+
+window.toggleSound = function(btn) {
+  const muted = AudioManager.toggleMute();
+  btn.textContent = muted ? '🔇 Off' : '🔊 On';
+};
+
+window.toggleChaosMode = function(btn) {
+  STATE.chaosMode = !STATE.chaosMode;
+  btn.textContent = STATE.chaosMode ? '🔥 On' : '❄️ Off';
+};
+
+// === MATCHMAKING ===
+let matchmakingActive = false;
+let matchmakingTimer = null;
+
+function startMatchmaking() {
+  if (matchmakingActive) return;
+  matchmakingActive = true;
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'matchmaking-overlay';
+  overlay.id = 'matchmakingOverlay';
+  overlay.innerHTML = '<div class="matchmaking-spinner"></div>' +
+    '<div class="matchmaking-text">Searching for opponent...</div>' +
+    '<div class="matchmaking-timer" id="matchmakingTime">0:00</div>' +
+    '<button class="btn" style="margin-top:20px" onclick="cancelMatchmaking()">Cancel</button>';
+  document.body.appendChild(overlay);
+  
+  let seconds = 0;
+  matchmakingTimer = setInterval(() => {
+    seconds++;
+    const el = document.getElementById('matchmakingTime');
+    if (el) el.textContent = Math.floor(seconds / 60) + ':' + (seconds % 60).toString().padStart(2, '0');
+  }, 1000);
+  
+  const findTime = 2000 + Math.random() * 3000;
+  setTimeout(() => {
+    if (matchmakingActive) {
+      clearInterval(matchmakingTimer);
+      const mmOverlay = document.getElementById('matchmakingOverlay');
+      if (mmOverlay) {
+        mmOverlay.querySelector('.matchmaking-text').textContent = '🎉 Opponent found!';
+        mmOverlay.querySelector('.matchmaking-spinner').style.display = 'none';
+        
+        setTimeout(() => {
+          mmOverlay.remove();
+          matchmakingActive = false;
+          STATE.phase = 'select';
+          render();
+        }, 1500);
+      }
+    }
+  }, findTime);
+}
+
+window.cancelMatchmaking = function() {
+  matchmakingActive = false;
+  if (matchmakingTimer) clearInterval(matchmakingTimer);
+  const overlay = document.getElementById('matchmakingOverlay');
+  if (overlay) overlay.remove();
+};
+
+// === BATTLE LOG ===
+function formatShareableLog() {
+  const p = STATE.player, e = STATE.enemy;
+  const lines = [
+    '╔═══════════════════════════════════════╗',
+    '║  CLARITY CLASH: CHAOS ARENA           ║',
+    '╚═══════════════════════════════════════╝',
+    '',
+    p.emoji + ' ' + p.name + ' vs ' + e.emoji + ' ' + e.name,
+    '',
+  ];
+  for (const entry of STATE.log) {
+    if (entry.type !== 'turn-sep') lines.push(entry.text);
+  }
+  lines.push('');
+  lines.push('─── FINAL STATS ───');
+  lines.push(p.emoji + ' ' + p.name + ': ' + p.hp + '/' + p.maxHp + ' HP | ' + p.totalDmgDealt + ' dmg dealt | ' + p.hits + ' hits / ' + p.misses + ' misses');
+  lines.push(e.emoji + ' ' + e.name + ': ' + e.hp + '/' + e.maxHp + ' HP | ' + e.totalDmgDealt + ' dmg dealt | ' + e.hits + ' hits / ' + e.misses + ' misses');
+  lines.push('Chaos: ' + Math.round(STATE.chaos) + ' | Clarity: ' + Math.round(STATE.clarity) + ' | Turns: ' + STATE.turn);
+  lines.push('Win: ' + (STATE.winType === 'clarity' ? 'CLARITY TRANSCENDENCE' : 'KNOCKOUT'));
+  lines.push('');
+  if (STATE.winner === 'player') {
+    lines.push('🏆 ' + p.name + ' is victorious!');
+  } else {
+    lines.push('☠️ ' + e.name + ' claims victory!');
+  }
+  lines.push('');
+  lines.push('Play: Clarity Clash: Chaos Arena');
+  return lines.join('\n');
+}
+
+function copyBattleLog() {
+  const text = formatShareableLog();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    if (btn) { 
+      btn.textContent = '✅ Copied!'; 
+      btn.classList.add('copied'); 
+      setTimeout(() => { 
+        btn.textContent = '📋 Copy Log'; 
+        btn.classList.remove('copied'); 
+      }, 2000); 
+    }
+  });
+}
+
+function getHighlightMoment() {
+  const p = STATE.player, e = STATE.enemy;
+  const highlights = [];
+  
+  const biggestHit = Math.max(p.totalDmgDealt, e.totalDmgDealt);
+  if (biggestHit > 30) {
+    highlights.push({ type: 'bigHit', value: biggestHit, text: '💥 Biggest single hit: ' + biggestHit + ' damage!' });
+  }
+  
+  const totalMisses = p.misses + e.misses;
+  if (totalMisses > 5) {
+    highlights.push({ type: 'misses', value: totalMisses, text: '💨 ' + totalMisses + ' total misses - aim training needed!' });
+  }
+  
+  if (p.hp < 20 || e.hp < 20) {
+    highlights.push({ type: 'close', value: Math.min(p.hp, e.hp), text: '😰 Down to ' + Math.min(p.hp, e.hp) + ' HP - nail-biter!' });
+  }
+  
+  if (STATE.chaos > 80) {
+    highlights.push({ type: 'chaos', value: STATE.chaos, text: '🔥 MAXIMUM CHAOS at ' + Math.round(STATE.chaos) + '!' });
+  }
+  
+  if (STATE.winType === 'clarity') {
+    highlights.push({ type: 'clarity', value: 100, text: '✨ Won by TRANSCENDENCE - no violence needed!' });
+  }
+  
+  return highlights.length > 0 ? pick(highlights) : { text: '⚔️ ' + STATE.turn + ' turns of pure chaos!' };
+}
+
+// FIX: rematch() now properly stops audio before starting new loop
+function rematch() {
+  if (!STATE.player || !STATE.enemy) {
+    resetState();
+    render();
+    return;
+  }
+  
+  const playerTemplate = CHARACTERS.find(c => c.name === STATE.player.name);
+  const enemyTemplate = CHARACTERS.find(c => c.name === STATE.enemy.name);
+  
+  if (!playerTemplate) {
+    resetState();
+    render();
+    return;
+  }
+  
+  // FIX: Stop background loop BEFORE starting a new one
+  AudioManager.stopBackgroundLoop();
+  
+  STATE.player = createFighter(playerTemplate, true);
+  STATE.enemy = createFighter(enemyTemplate, false);
+  STATE.phase = 'battle';
+  STATE.turn = 1;
+  STATE.chaos = STATE.chaosMode ? 50 : 10;
+  STATE.clarity = 10;
+  STATE.log = [];
+  STATE.logId = 0;
+  STATE.inputLocked = false;
+  STATE.matchId = 'match_' + Date.now();
+  STATE.replayData = [];
+  STATE.currentActor = 'player';
+  
+  STATE.playerGoesFirst = determineInitiative(STATE.player, STATE.enemy, STATE.chaos);
+  STATE.currentActor = STATE.playerGoesFirst ? 'player' : 'enemy';
+  
+  addLog(STATE.player.emoji + ' ' + STATE.player.name + ' vs ' + STATE.enemy.emoji + ' ' + STATE.enemy.name, 'system');
+  addLog('────────── REMATCH! ──────────', 'system');
+  
+  AudioManager.startBackgroundLoop(STATE.chaos);
+  render();
+  
+  if (STATE.currentActor === 'enemy') {
+    setTimeout(() => executeEnemyTurn(), 500);
+  } else {
+    startTurnTimer();
+  }
+}
+
+// === RENDERER ===
+function render() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  
+  if (STATE.phase === 'select') {
+    app.innerHTML = renderCharacterSelect();
+  } else {
+    app.innerHTML = renderBattle();
+    const logEl = document.querySelector('.log-container');
+    if (logEl) logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+
+// FIX: renderTopBar uses proper template interpolation
+function renderTopBar() {
+  const username = STATE.user ? STATE.user.username : 'Guest';
+  const soundIcon = AudioManager.muted ? '🔇' : '🔊';
+  const userWins = STATE.user && STATE.user.stats ? STATE.user.stats.wins : 0;
+  
+  let userStatsHtml = '';
+  if (STATE.user) {
+    userStatsHtml = '<span style="color:var(--yellow);font-size:0.7em">⭐ ' + userWins + 'W</span>';
+  }
+  
+  return '<div class="top-bar">' +
+    '<div class="user-info" onclick="showProfile()" style="cursor:pointer">' +
+      '<div class="avatar">👤</div>' +
+      '<span>' + username + '</span>' +
+      userStatsHtml +
+    '</div>' +
+    '<div class="controls">' +
+      '<button class="icon-btn" onclick="toggleSoundBtn(this)" title="Sound">' + soundIcon + '</button>' +
+      '<button class="icon-btn" onclick="showLeaderboard()" title="Leaderboard">🏆</button>' +
+      '<button class="icon-btn" onclick="showMatchHistory()" title="History">📜</button>' +
+      '<button class="icon-btn" onclick="showSettings()" title="Settings">⚙️</button>' +
+    '</div>' +
+  '</div>';
+}
+
+window.toggleSoundBtn = function(btn) {
+  const muted = AudioManager.toggleMute();
+  btn.textContent = muted ? '🔇' : '🔊';
+};
+
+function renderWeeklyBanner() {
+  const mods = STATE.weeklyMods;
+  const buffedNames = mods.buffed.map(i => CHARACTERS[i].name).join(', ');
+  const nerfedNames = mods.nerfed.map(i => CHARACTERS[i].name).join(', ');
+  
+  return '<div class="weekly-banner">' +
+    '<div class="banner-title">📅 Week ' + (mods.week % 52 + 1) + ' Balance Update</div>' +
+    '<div><span class="buffs">⬆️ Buffed: ' + buffedNames + '</span> | <span class="nerfs">⬇️ Nerfed: ' + nerfedNames + '</span></div>' +
+  '</div>';
+}
+
+function renderCharacterSelect() {
+  const mods = STATE.weeklyMods;
+  
+  let html = renderTopBar();
+  html += '<div class="title">' +
+    '<h1>CLARITY CLASH</h1>' +
+    '<div class="sub">Chaos Arena</div>' +
+    '<div class="tagline">Choose your fighter. Choose poorly.</div>' +
+  '</div>';
+  
+  html += renderWeeklyBanner();
+  
+  html += '<div style="display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap">' +
+    '<button class="btn btn-primary" onclick="selectCharacter(Math.floor(Math.random()*' + CHARACTERS.length + '))">⚡ Quick Play</button>' +
+    '<button class="btn" onclick="startMatchmaking()">🎮 Find Match</button>' +
+    '<button class="btn" onclick="showStrategyGuide()">📖 Strategy</button>' +
+  '</div>';
+  
+  html += '<div class="char-grid">';
+  CHARACTERS.forEach((c, i) => {
+    const isBuffed = mods.buffed.includes(i);
+    const isNerfed = mods.nerfed.includes(i);
+    const mastery = STATE.user && STATE.user.mastery ? (STATE.user.mastery[c.name] || { level: 1, xp: 0 }) : { level: 1, xp: 0 };
+    const xpThresholds = [0, 200, 500, 1000, 2000];
+    const nextThreshold = xpThresholds[mastery.level] || 2000;
+    const masteryProgress = Math.min(100, (mastery.xp / nextThreshold) * 100);
+    
+    let modifierBadge = '';
+    if (isBuffed) modifierBadge = '<div class="modifier-badge buff">⬆️ BUFFED</div>';
+    if (isNerfed) modifierBadge = '<div class="modifier-badge nerf">⬇️ NERFED</div>';
+    
+    let masteryHtml = '';
+    if (STATE.user) {
+      masteryHtml = '<div class="mastery-bar"><div class="mastery-fill" style="width:' + masteryProgress + '%"></div></div>' +
+        '<div class="mastery-label">Mastery Lv.' + mastery.level + ' (' + mastery.xp + '/' + nextThreshold + ' XP)</div>';
+    }
+    
+    let movesHtml = '';
+    c.moves.slice(0, 4).forEach(m => {
+      movesHtml += '<span>' + m.name + '</span>';
+    });
+    
+    html += '<div class="char-card" onclick="selectCharacter(' + i + ')" style="--accent:' + c.color + '">' +
+      modifierBadge +
+      '<div class="char-header">' +
+        '<span class="char-emoji">' + c.emoji + '</span>' +
+        '<span class="char-name" style="color:' + c.color + '">' + c.name + (mastery.level >= 5 ? ' ⭐' : '') + '</span>' +
+      '</div>' +
+      '<div class="char-desc">' + c.description + '</div>' +
+      '<div class="stat-grid">' +
+        '<div class="stat-row"><span class="stat-label">HP</span><span class="stat-hp">' + c.hp + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">DMG</span><span class="stat-dmg">' + c.damage + (isBuffed ? ' (+)' : isNerfed ? ' (-)' : '') + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">DEF</span><span class="stat-def">' + c.defense + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">ACC</span><span class="stat-acc">' + c.accuracy + (isBuffed ? ' (+)' : isNerfed ? ' (-)' : '') + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">EVA</span><span class="stat-eva">' + c.evasion + '</span></div>' +
+        '<div class="stat-row"><span class="stat-label">SPD</span><span class="stat-spd">' + c.speed + '</span></div>' +
+      '</div>' +
+      '<div style="margin-top:8px;font-size:.62em;color:' + c.color + '">⚡ ' + c.passive.name + ': ' + c.passive.desc + '</div>' +
+      '<div class="char-moves">' + movesHtml + '</div>' +
+      masteryHtml +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function hpColor(pct) { return pct > 50 ? 'hp-green' : pct > 25 ? 'hp-yellow' : 'hp-red'; }
+
+function renderStatusPills(fighter) {
+  let html = '';
+  fighter.statuses.forEach(s => {
+    const def = STATUS_DEFS[s.id];
+    if (!def) return;
+    const cls = def.type === 'buff' ? 'status-buff' : def.type === 'debuff' ? 'status-debuff' : 'status-neutral';
+    html += '<span class="status-pill ' + cls + '">' + def.emoji + ' ' + def.name + ' (' + s.turns + ')</span>';
+  });
+  return html;
+}
+
+function chaosLabel(c) {
+  if (c < 20) return 'Simmering';
+  if (c < 40) return 'Unhinged';
+  if (c < 60) return 'Volatile';
+  if (c < 80) return 'Pure Bedlam';
+  return 'MAXIMUM CHAOS';
+}
+
+function clarityLabel(c) {
+  if (c < 20) return 'Foggy';
+  if (c < 40) return 'Hazy';
+  if (c < 60) return 'Clearing';
+  if (c < 80) return 'Lucid';
+  return 'TRANSCENDENCE';
+}
+
+function renderBattle() {
+  const p = STATE.player, e = STATE.enemy;
+  const pPct = Math.max(0, (p.hp / p.maxHp) * 100);
+  const ePct = Math.max(0, (e.hp / e.maxHp) * 100);
+  const isActive = STATE.phase === 'battle';
+  const isPlayerTurn = STATE.currentActor === 'player';
+  
+  const comboHint = isActive ? getComboHint(p) : null;
+  
+  // Battle header with Home and Surrender buttons
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+    '<button class="btn btn-small" onclick="confirmGoHome()" title="Return to character select">🏠 Home</button>' +
+    '<div class="battle-header" style="flex:1;margin:0 10px">' +
+      '<h1 style="font-size:1.4em">CLARITY CLASH</h1>' +
+      '<div class="turn-indicator">' +
+        'Turn ' + STATE.turn + ' | ' +
+        '<span class="' + (isPlayerTurn ? 'active-turn' : '') + '">' + (isPlayerTurn ? '⚔️ Your Turn' : '⏳ Enemy Turn') + '</span>' +
+      '</div>' +
+    '</div>' +
+    (isActive ? '<button class="btn btn-small" style="background:var(--red);border-color:var(--red);color:#fff" onclick="confirmSurrender()" title="Give up">🏳️ Surrender</button>' : '<div style="width:90px"></div>') +
+  '</div>';
+  
+  if (isActive && isPlayerTurn && STATE.turnTimeLeft > 0) {
+    const timerPct = (STATE.turnTimeLeft / 15) * 100;
+    html += '<div class="turn-timer"><div class="turn-timer-fill" style="width:' + timerPct + '%"></div></div>';
+  }
+  
+  html += '<div class="fighter-portraits">' +
+    '<div class="fighter-portrait">' +
+      '<div class="portrait-emoji" style="--portrait-color:' + p.color + '">' + p.emoji + '</div>' +
+      '<div class="portrait-name" style="color:' + p.color + '">' + p.name + '</div>' +
+      '<div class="portrait-you">YOU</div>' +
+    '</div>' +
+    '<div class="vs-indicator">VS</div>' +
+    '<div class="fighter-portrait">' +
+      '<div class="portrait-emoji" style="--portrait-color:' + e.color + '">' + e.emoji + '</div>' +
+      '<div class="portrait-name" style="color:' + e.color + '">' + e.name + '</div>' +
+    '</div>' +
+  '</div>';
+  
+  html += '<div class="hp-section hp-bar-enemy ' + (!isPlayerTurn && isActive ? 'active-fighter' : '') + '">' +
+    '<div class="hp-header">' +
+      '<span class="hp-name">' + e.emoji + ' ' + e.name + '</span>' +
+      '<span class="hp-numbers">' + Math.max(0, e.hp) + ' / ' + e.maxHp + '</span>' +
+    '</div>' +
+    '<div class="hp-bar-outer"><div class="hp-bar-inner ' + hpColor(ePct) + '" style="width:' + ePct + '%"></div></div>' +
+    '<div class="status-effects">' + renderStatusPills(e) + '</div>' +
+  '</div>';
+  
+  html += '<div class="meters">' +
+    '<div class="meter meter-chaos">' +
+      '<div class="meter-header"><span>🔥 CHAOS</span><span>' + Math.round(STATE.chaos) + '</span></div>' +
+      '<div class="meter-bar"><div class="meter-fill-chaos" style="width:' + STATE.chaos + '%"></div></div>' +
+      '<div class="meter-label">' + chaosLabel(STATE.chaos) + '</div>' +
+    '</div>' +
+    '<div class="meter meter-clarity">' +
+      '<div class="meter-header"><span>✨ CLARITY</span><span>' + Math.round(STATE.clarity) + '</span></div>' +
+      '<div class="meter-bar"><div class="meter-fill-clarity" style="width:' + STATE.clarity + '%"></div></div>' +
+      '<div class="meter-label">' + clarityLabel(STATE.clarity) + '</div>' +
+    '</div>' +
+  '</div>';
+  
+  if (isActive && (p.comboMultiplier > 1 || comboHint)) {
+    html += '<div class="combo-display">' +
+      '<div class="combo-chain">' + (p.comboChain.length > 0 ? '🔗 Chain: ' + p.comboChain.length : '') + '</div>' +
+      '<div class="combo-multiplier">' + (p.comboMultiplier > 1 ? 'x' + p.comboMultiplier.toFixed(1) : '') + '</div>' +
+      '<div class="combo-hint">' + (comboHint ? '💡 Try: ' + p.moves[comboHint.nextMoveIndex].name + ' for ' + comboHint.comboName : '') + '</div>' +
+    '</div>';
+  }
+  
+  let logHtml = '';
+  STATE.log.forEach(function(entry) {
+    logHtml += '<div class="log-entry log-' + entry.type + '">' + (entry.text || '&nbsp;') + '</div>';
+  });
+  html += '<div class="log-container">' + logHtml + '</div>';
+  
+  html += '<div class="hp-section ' + (isPlayerTurn && isActive ? 'active-fighter' : '') + '">' +
+    '<div class="hp-header">' +
+      '<span class="hp-name">' + p.emoji + ' ' + p.name + ' (YOU)</span>' +
+      '<span class="hp-numbers">' + Math.max(0, p.hp) + ' / ' + p.maxHp + '</span>' +
+    '</div>' +
+    '<div class="hp-bar-outer"><div class="hp-bar-inner ' + hpColor(pPct) + '" style="width:' + pPct + '%"></div></div>' +
+    '<div class="status-effects">' + renderStatusPills(p) + '</div>' +
+  '</div>';
+  
+  if (isActive) {
+    const locked = STATE.inputLocked || !isPlayerTurn;
+    html += '<div class="moves-grid">';
+    p.moves.forEach(function(m, i) {
+      const onCd = p.cooldowns[i] > 0;
+      const isShared = i === p.moves.length - 1;
+      const isHinted = comboHint && comboHint.nextMoveIndex === i;
+      const cdAttr = onCd ? 'data-cd="' + p.cooldowns[i] + 'T"' : '';
+      const disabled = locked || onCd;
+      
+      let tagsHtml = '';
+      m.tags.forEach(function(t) {
+        tagsHtml += '<span class="tag-' + t + '">' + t + '</span>';
+      });
+      if (m.damage > 0) tagsHtml += '<span class="tag-stat">' + m.damage + ' dmg</span>';
+      if (m.accuracy < 100) tagsHtml += '<span class="tag-stat">' + m.accuracy + '% acc</span>';
+      if (m.heal) tagsHtml += '<span class="tag-stat" style="color:var(--green)">+' + m.heal + ' hp</span>';
+      if (m.cooldown > 0) tagsHtml += '<span class="tag-stat" style="color:var(--orange)">' + m.cooldown + 'T cd</span>';
+      if (m.statusApply && STATUS_DEFS[m.statusApply]) {
+        tagsHtml += '<span class="tag-stat" style="color:var(--pink)">' + STATUS_DEFS[m.statusApply].emoji + ' ' + STATUS_DEFS[m.statusApply].name + '</span>';
+      }
+      
+      html += '<button class="move-btn ' + (isShared ? 'move-shared ' : '') + (onCd ? 'on-cooldown ' : '') + (locked ? 'locked ' : '') + (isHinted ? 'combo-hint-move' : '') + '" ' +
+        'onclick="executePlayerTurn(' + i + ')" ' + (disabled ? 'disabled' : '') + ' ' + cdAttr + '>' +
+        '<div class="move-name">' + m.name + (isHinted ? ' 💡' : '') + '</div>' +
+        '<div class="move-desc">' + m.desc + '</div>' +
+        '<div class="move-tags">' + tagsHtml + '</div>' +
+      '</button>';
+    });
+    html += '</div>';
+  }
+  
+  if (STATE.phase === 'gameover') {
+    const won = STATE.winner === 'player';
+    const highlight = getHighlightMoment();
+    
+    let winTypeText = '💀 KNOCKOUT 💀';
+    if (STATE.winType === 'clarity') winTypeText = '✨ CLARITY TRANSCENDENCE ✨';
+    if (STATE.winType === 'surrender') winTypeText = '🏳️ SURRENDER 🏳️';
+    
+    const flavorTexts = won
+      ? [
+          p.name + ' stands victorious. Dignity was already dead.',
+          'Against all odds and common sense, ' + p.name + ' prevails.',
+          e.name + ' has been defeated. ' + p.name + ' barely qualifies as a winner.',
+        ]
+      : [
+          e.name + ' has ended your journey. It was ugly.',
+          p.name + ' lies defeated. Nobody is proud.',
+          e.name + ' stands victorious. The crowd disperses.',
+        ];
+    
+    html += '<div class="game-over">' +
+      '<div class="trophy">' + (won ? '🏆' : '💀') + '</div>' +
+      '<h2>' + (won ? 'YOU WIN!' : 'YOU LOST!') + '</h2>' +
+      '<div class="go-sub">' + winTypeText + '</div>' +
+      '<div class="go-highlight">' +
+        '<div class="label">⭐ Highlight</div>' +
+        '<div class="value">' + highlight.text + '</div>' +
+      '</div>' +
+      '<div class="go-stats">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0">' +
+          '<div>' +
+            p.emoji + ' <strong>' + p.name + '</strong><br>' +
+            p.hp + '/' + p.maxHp + ' HP<br>' +
+            p.totalDmgDealt + ' dmg dealt<br>' +
+            p.hits + '/' + (p.hits + p.misses) + ' hits' +
+          '</div>' +
+          '<div>' +
+            e.emoji + ' <strong>' + e.name + '</strong><br>' +
+            e.hp + '/' + e.maxHp + ' HP<br>' +
+            e.totalDmgDealt + ' dmg dealt<br>' +
+            e.hits + '/' + (e.hits + e.misses) + ' hits' +
+          '</div>' +
+        '</div>' +
+        'Chaos: ' + Math.round(STATE.chaos) + ' | Clarity: ' + Math.round(STATE.clarity) + ' | Turns: ' + STATE.turn +
+      '</div>' +
+      '<div class="go-flavor">"' + pick(flavorTexts) + '"</div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-primary" onclick="playAgain()">⚔️ Play Again</button>' +
+        '<button class="btn" onclick="rematch()">🔄 Rematch</button>' +
+        '<button class="btn btn-copy" onclick="copyBattleLog()">📋 Copy Log</button>' +
+      '</div>' +
+    '</div>';
+  }
+  
+  return html;
+}
+
+// === INITIALIZATION ===
+async function init() {
+  initParticles();
+  
+  const savedUsername = localStorage.getItem('cc_username');
+  if (savedUsername) {
+    STATE.user = await mockAPI.getProfile(savedUsername);
+  }
+  
+  render();
+}
+
+// === GAME CONTROL FUNCTIONS ===
+function goToHome() {
+  stopTurnTimer();
+  AudioManager.stopBackgroundLoop();
+  STATE.phase = 'select';
+  STATE.player = null;
+  STATE.enemy = null;
+  STATE.chaos = 10;
+  STATE.clarity = 10;
+  STATE.turn = 0;
+  STATE.log = [];
+  STATE.logId = 0;
+  STATE.currentEvent = null;
+  STATE.currentActor = 'player';
+  STATE.playerGoesFirst = true;
+  STATE.inputLocked = false;
+  STATE.matchId = null;
+  STATE.replayData = [];
+  render();
+}
+
+function doResetState() {
+  stopTurnTimer();
+  AudioManager.stopBackgroundLoop();
+  STATE.phase = 'select';
+  STATE.player = null;
+  STATE.enemy = null;
+  STATE.chaos = 10;
+  STATE.clarity = 10;
+  STATE.turn = 0;
+  STATE.log = [];
+  STATE.logId = 0;
+  STATE.currentEvent = null;
+  STATE.currentActor = 'player';
+  STATE.playerGoesFirst = true;
+  STATE.inputLocked = false;
+  STATE.matchId = null;
+  STATE.replayData = [];
+  // Keep user and chaosMode
+  render();
+}
+
+function doRematch() {
+  if (!STATE.player || !STATE.enemy) {
+    doResetState();
+    return;
+  }
+  
+  const playerName = STATE.player.name;
+  const enemyName = STATE.enemy.name;
+  
+  const playerTemplate = CHARACTERS.find(c => c.name === playerName);
+  const enemyTemplate = CHARACTERS.find(c => c.name === enemyName);
+  
+  if (!playerTemplate || !enemyTemplate) {
+    doResetState();
+    return;
+  }
+  
+  stopTurnTimer();
+  AudioManager.stopBackgroundLoop();
+  
+  STATE.player = createFighter(playerTemplate, true);
+  STATE.enemy = createFighter(enemyTemplate, false);
+  STATE.phase = 'battle';
+  STATE.turn = 1;
+  STATE.chaos = STATE.chaosMode ? 50 : 10;
+  STATE.clarity = 10;
+  STATE.log = [];
+  STATE.logId = 0;
+  STATE.inputLocked = false;
+  STATE.matchId = 'match_' + Date.now();
+  STATE.replayData = [];
+  
+  STATE.playerGoesFirst = determineInitiative(STATE.player, STATE.enemy, STATE.chaos);
+  STATE.currentActor = STATE.playerGoesFirst ? 'player' : 'enemy';
+  
+  addLog(STATE.player.emoji + ' ' + STATE.player.name + ' vs ' + STATE.enemy.emoji + ' ' + STATE.enemy.name, 'system');
+  addLog('────────── REMATCH! ──────────', 'system');
+  
+  AudioManager.startBackgroundLoop(STATE.chaos);
+  render();
+  
+  if (STATE.currentActor === 'enemy') {
+    setTimeout(function() { executeEnemyTurn(); }, 500);
+  } else {
+    startTurnTimer();
+  }
+}
+
+function surrender() {
+  if (STATE.phase !== 'battle') return;
+  
+  stopTurnTimer();
+  STATE.inputLocked = true;
+  
+  const p = STATE.player;
+  const e = STATE.enemy;
+  
+  addLog('', 'turn-sep');
+  addLog('🏳️ ' + p.name + ' surrenders!', 'system');
+  addLog('☠️ ' + e.name + ' wins by forfeit. ' + pick(COMMENTARY.victory), 'system');
+  
+  STATE.phase = 'gameover';
+  STATE.winner = 'enemy';
+  STATE.winType = 'surrender';
+  
+  AudioManager.playDefeat();
+  saveMatchResult();
+  render();
+}
+
+function confirmSurrender() {
+  const content = '<h2>🏳️ Surrender?</h2>' +
+    '<p style="text-align:center;color:var(--dim);margin-bottom:20px">Are you sure you want to give up? This will count as a loss.</p>' +
+    '<div class="btn-row">' +
+      '<button class="btn" onclick="closeModal()">Cancel</button>' +
+      '<button class="btn" style="background:var(--red);border-color:var(--red);color:#fff" onclick="closeModal();surrender()">Surrender</button>' +
+    '</div>';
+  showModal(content);
+}
+
+function confirmGoHome() {
+  if (STATE.phase === 'battle') {
+    const content = '<h2>🏠 Leave Battle?</h2>' +
+      '<p style="text-align:center;color:var(--dim);margin-bottom:20px">Are you sure you want to leave? Your progress will be lost.</p>' +
+      '<div class="btn-row">' +
+        '<button class="btn" onclick="closeModal()">Cancel</button>' +
+        '<button class="btn btn-primary" onclick="closeModal();goToHome()">Leave</button>' +
+      '</div>';
+    showModal(content);
+  } else {
+    goToHome();
+  }
+}
+
+// Global exports - using unique names to avoid recursion
+window.selectCharacter = selectCharacter;
+window.executePlayerTurn = executePlayerTurn;
+window.resetState = doResetState;
+window.playAgain = doResetState;
+window.copyBattleLog = copyBattleLog;
+window.rematch = doRematch;
+window.showLoginModal = showLoginModal;
+window.showLeaderboard = showLeaderboard;
+window.showMatchHistory = showMatchHistory;
+window.showProfile = showProfile;
+window.showStrategyGuide = showStrategyGuide;
+window.showSettings = showSettings;
+window.startMatchmaking = startMatchmaking;
+window.closeModal = closeModal;
+window.goToHome = goToHome;
+window.confirmGoHome = confirmGoHome;
+window.surrender = surrender;
+window.confirmSurrender = confirmSurrender;
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+Here’s a copy‑paste checklist for deploying from now on (after the initial setup is done).
+
+Deploy steps (every time)
+Open project folder in terminal
+
+bash
+cd path/to/your/project
+See what changed (optional but good)
+
+bash
+git status
+Stage all changes
+
+bash
+git add .
+Commit with a clear message
+
+bash
+git commit -m "Describe what you changed"
+Push to the production branch (usually main)
+
+bash
+git push origin main
+Wait for Cloudflare Pages build
+
+Cloudflare will auto‑deploy every time you push to the production branch configured in the Pages project.
+
+Watch the build under: Cloudflare Dashboard → Workers & Pages → Your project → Deployments.
+
+Check live site
+
+Open your yourproject.pages.dev URL or your custom domain.
+
+If nothing updates, double‑check you pushed to the same branch set as Production branch in Cloudflare Pages settings.
