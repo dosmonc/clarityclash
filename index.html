@@ -1236,7 +1236,6 @@ let STATE = {
   chaosMode: false,
 };
 
-// === ANIMATION MANAGER ===
 const AnimationManager = {
   queue: [],
   isPlaying: false,
@@ -1256,23 +1255,110 @@ const AnimationManager = {
   
   async execute(anim) {
     switch (anim.type) {
-      case 'delay': await delay(anim.duration); break;
-      case 'log': addLog(anim.text, anim.logType); render(); break;
-      case 'damage': await this.animateDamage(anim); break;
-      case 'heal': await this.animateHeal(anim); break;
-      case 'miss': await this.animateMiss(anim); break;
-      case 'status': await this.animateStatus(anim); break;
-      case 'move': await this.animateMove(anim); break;
-      case 'event': await this.animateEvent(anim); break;
-      case 'crit': await this.animateCrit(anim); break;
-      case 'combo': await this.animateCombo(anim); break;
-      case 'render': render(); break;
+      case 'delay': 
+        await delay(anim.duration); 
+        break;
+      case 'log': 
+        addLog(anim.text, anim.logType); 
+        this.updateLogOnly(); // Only update log, not whole page
+        break;
+      case 'damage': 
+        await this.animateDamage(anim); 
+        break;
+      case 'heal': 
+        await this.animateHeal(anim); 
+        break;
+      case 'miss': 
+        await this.animateMiss(anim); 
+        break;
+      case 'status': 
+        await this.animateStatus(anim); 
+        break;
+      case 'move': 
+        await this.animateMove(anim); 
+        break;
+      case 'event': 
+        await this.animateEvent(anim); 
+        break;
+      case 'crit': 
+        await this.animateCrit(anim); 
+        break;
+      case 'combo': 
+        await this.animateCombo(anim); 
+        break;
+      case 'render': 
+        render(); 
+        break;
     }
   },
   
+  // NEW: Update only the log container without rebuilding entire page
+  updateLogOnly() {
+    const logContainer = document.querySelector('.log-container');
+    if (logContainer) {
+      let logHtml = '';
+      STATE.log.forEach(function(entry) {
+        logHtml += '<div class="log-entry log-' + entry.type + '">' + (entry.text || '&nbsp;') + '</div>';
+      });
+      logContainer.innerHTML = logHtml;
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+  },
+  
+  // NEW: Update only HP bars without rebuilding entire page
+  updateHpBars() {
+    const p = STATE.player;
+    const e = STATE.enemy;
+    
+    if (!p || !e) return;
+    
+    const pPct = Math.max(0, (p.hp / p.maxHp) * 100);
+    const ePct = Math.max(0, (e.hp / e.maxHp) * 100);
+    
+    // Update player HP bar
+    const playerHpBar = document.querySelector('.hp-section:not(.hp-bar-enemy) .hp-bar-inner');
+    const playerHpNumbers = document.querySelector('.hp-section:not(.hp-bar-enemy) .hp-numbers');
+    if (playerHpBar) {
+      playerHpBar.style.width = pPct + '%';
+      playerHpBar.className = 'hp-bar-inner ' + hpColor(pPct);
+    }
+    if (playerHpNumbers) {
+      playerHpNumbers.textContent = Math.max(0, p.hp) + '/' + p.maxHp;
+    }
+    
+    // Update enemy HP bar
+    const enemyHpBar = document.querySelector('.hp-bar-enemy .hp-bar-inner');
+    const enemyHpNumbers = document.querySelector('.hp-bar-enemy .hp-numbers');
+    if (enemyHpBar) {
+      enemyHpBar.style.width = ePct + '%';
+      enemyHpBar.className = 'hp-bar-inner ' + hpColor(ePct);
+    }
+    if (enemyHpNumbers) {
+      enemyHpNumbers.textContent = Math.max(0, e.hp) + '/' + e.maxHp;
+    }
+  },
+  
+  // NEW: Update only meters without rebuilding entire page
+  updateMeters() {
+    const chaosFill = document.querySelector('.meter-fill-chaos');
+    const clarityFill = document.querySelector('.meter-fill-clarity');
+    const chaosValue = document.querySelector('.meter-chaos .meter-header span:last-child');
+    const clarityValue = document.querySelector('.meter-clarity .meter-header span:last-child');
+    const chaosLabel = document.querySelector('.meter-chaos .meter-label');
+    const clarityLabelEl = document.querySelector('.meter-clarity .meter-label');
+    
+    if (chaosFill) chaosFill.style.width = STATE.chaos + '%';
+    if (clarityFill) clarityFill.style.width = STATE.clarity + '%';
+    if (chaosValue) chaosValue.textContent = Math.round(STATE.chaos);
+    if (clarityValue) clarityValue.textContent = Math.round(STATE.clarity);
+    if (chaosLabel) chaosLabel.textContent = chaosLabelText(STATE.chaos);
+    if (clarityLabelEl) clarityLabelEl.textContent = clarityLabelText(STATE.clarity);
+  },
+  
   async animateDamage({ target, damage, isCrit }) {
-    const section = document.querySelector(target === 'player' ? '.hp-section:last-of-type' : '.hp-section.hp-bar-enemy');
-    const portrait = document.querySelector(target === 'player' ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+    const isPlayer = target === 'player';
+    const section = document.querySelector(isPlayer ? '.hp-section:not(.hp-bar-enemy)' : '.hp-section.hp-bar-enemy');
+    const portrait = document.querySelector(isPlayer ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
     
     if (section) {
       section.classList.add('shake');
@@ -1280,15 +1366,15 @@ const AnimationManager = {
       floater.className = 'floating-damage' + (isCrit ? ' crit' : '');
       floater.textContent = '-' + damage;
       section.appendChild(floater);
-      setTimeout(() => {
+      setTimeout(function() {
         section.classList.remove('shake');
-        floater.remove();
+        if (floater.parentNode) floater.remove();
       }, 1000);
     }
     
     if (portrait) {
       portrait.classList.add('shake');
-      setTimeout(() => portrait.classList.remove('shake'), 300);
+      setTimeout(function() { portrait.classList.remove('shake'); }, 300);
     }
     
     if (isCrit) {
@@ -1298,38 +1384,43 @@ const AnimationManager = {
       AudioManager.playHit();
     }
     
-    render();
+    // Only update HP bars, not entire page
+    this.updateHpBars();
     await delay(500);
   },
   
   async animateHeal({ target, amount }) {
-    const section = document.querySelector(target === 'player' ? '.hp-section:last-of-type' : '.hp-section.hp-bar-enemy');
-    const portrait = document.querySelector(target === 'player' ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+    const isPlayer = target === 'player';
+    const section = document.querySelector(isPlayer ? '.hp-section:not(.hp-bar-enemy)' : '.hp-section.hp-bar-enemy');
+    const portrait = document.querySelector(isPlayer ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
     
     if (section) {
       const floater = document.createElement('div');
       floater.className = 'floating-damage heal';
       floater.textContent = '+' + amount;
       section.appendChild(floater);
-      setTimeout(() => floater.remove(), 1000);
+      setTimeout(function() { if (floater.parentNode) floater.remove(); }, 1000);
     }
     
     if (portrait) {
       portrait.classList.add('pulse');
-      setTimeout(() => portrait.classList.remove('pulse'), 500);
+      setTimeout(function() { portrait.classList.remove('pulse'); }, 500);
     }
     
     this.showHealParticles(target);
     AudioManager.playHeal();
-    render();
+    
+    // Only update HP bars, not entire page
+    this.updateHpBars();
     await delay(400);
   },
   
   async animateMiss({ target }) {
-    const portrait = document.querySelector(target === 'player' ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
+    const isPlayer = target === 'player';
+    const portrait = document.querySelector(isPlayer ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
     if (portrait) {
       portrait.classList.add('fade');
-      setTimeout(() => portrait.classList.remove('fade'), 300);
+      setTimeout(function() { portrait.classList.remove('fade'); }, 300);
     }
     AudioManager.playMiss();
     await delay(300);
@@ -1339,25 +1430,44 @@ const AnimationManager = {
     const def = STATUS_DEFS[status];
     if (!def) return;
     
-    const section = document.querySelector(target === 'player' ? '.hp-section:last-of-type' : '.hp-section.hp-bar-enemy');
+    const isPlayer = target === 'player';
+    const section = document.querySelector(isPlayer ? '.hp-section:not(.hp-bar-enemy)' : '.hp-section.hp-bar-enemy');
     if (section) {
       const pop = document.createElement('div');
       pop.className = 'status-pop';
       pop.textContent = def.emoji;
       pop.style.left = '50%';
       pop.style.bottom = '20px';
+      pop.style.transform = 'translateX(-50%)';
       section.style.position = 'relative';
       section.appendChild(pop);
-      setTimeout(() => pop.remove(), 800);
+      setTimeout(function() { if (pop.parentNode) pop.remove(); }, 800);
     }
     
-    render();
+    // Update status pills only
+    this.updateStatusPills();
     await delay(300);
   },
   
-  // FIX: Renamed inner variable to avoid shadowing
+  // NEW: Update only status pills
+  updateStatusPills() {
+    const p = STATE.player;
+    const e = STATE.enemy;
+    
+    const playerStatuses = document.querySelector('.hp-section:not(.hp-bar-enemy) .status-effects');
+    const enemyStatuses = document.querySelector('.hp-bar-enemy .status-effects');
+    
+    if (playerStatuses && p) {
+      playerStatuses.innerHTML = renderStatusPills(p);
+    }
+    if (enemyStatuses && e) {
+      enemyStatuses.innerHTML = renderStatusPills(e);
+    }
+  },
+  
   async animateMove({ attacker, defender, move, tags }) {
     const animContainer = document.getElementById('moveAnimation');
+    if (!animContainer) return;
     animContainer.innerHTML = '';
     
     const isPlayerAttacker = attacker === 'player';
@@ -1370,10 +1480,10 @@ const AnimationManager = {
       proj.textContent = pick(projectiles);
       proj.style.left = startX;
       proj.style.top = '40%';
-      proj.style.transform = 'translateX(' + (isPlayerAttacker ? '' : '-') + '300px)';
+      proj.style.transform = 'translateX(' + (isPlayerAttacker ? '300' : '-300') + 'px)';
       animContainer.appendChild(proj);
       
-      requestAnimationFrame(() => {
+      requestAnimationFrame(function() {
         proj.style.transition = 'transform 0.4s ease-out, opacity 0.4s';
         proj.style.transform = 'translateX(0px)';
       });
@@ -1392,16 +1502,15 @@ const AnimationManager = {
       const portrait = document.querySelector(isPlayerAttacker ? '.fighter-portrait:first-child .portrait-emoji' : '.fighter-portrait:last-child .portrait-emoji');
       if (portrait) {
         portrait.style.opacity = '0.3';
-        setTimeout(() => portrait.style.opacity = '1', 400);
+        setTimeout(function() { portrait.style.opacity = '1'; }, 400);
       }
     }
     
-    // FIX: Use gameContainer instead of shadowing container variable
     if (tags.includes('sloppy')) {
       const gameContainer = document.querySelector('.game-container');
       if (gameContainer) {
         gameContainer.classList.add('screen-wobble');
-        setTimeout(() => gameContainer.classList.remove('screen-wobble'), 400);
+        setTimeout(function() { gameContainer.classList.remove('screen-wobble'); }, 400);
       }
     }
     
@@ -1432,12 +1541,13 @@ const AnimationManager = {
     const flash = document.getElementById('screenFlash');
     if (flash) {
       flash.classList.add('active');
-      setTimeout(() => flash.classList.remove('active'), 100);
+      setTimeout(function() { flash.classList.remove('active'); }, 100);
     }
   },
   
   showHealParticles(target) {
     const animContainer = document.getElementById('moveAnimation');
+    if (!animContainer) return;
     const isPlayer = target === 'player';
     const particles = document.createElement('div');
     particles.className = 'heal-particles';
@@ -1445,7 +1555,7 @@ const AnimationManager = {
     particles.style.top = '40%';
     particles.innerHTML = '✨💚✨💚✨';
     animContainer.appendChild(particles);
-    setTimeout(() => particles.remove(), 600);
+    setTimeout(function() { if (particles.parentNode) particles.remove(); }, 600);
   }
 };
 
@@ -1820,15 +1930,23 @@ function startTurnTimer() {
   if (STATE.turnTimer) clearInterval(STATE.turnTimer);
   STATE.turnTimeLeft = 15;
   
-  STATE.turnTimer = setInterval(() => {
+  STATE.turnTimer = setInterval(function() {
     STATE.turnTimeLeft--;
-    render();
     
+    // ONLY update the timer bar, NOT the whole page
+    const timerFill = document.querySelector('.turn-timer-fill');
+    if (timerFill) {
+      const timerPct = (STATE.turnTimeLeft / 15) * 100;
+      timerFill.style.width = timerPct + '%';
+    }
+    
+    // Only do a full render when time runs out
     if (STATE.turnTimeLeft <= 0) {
       clearInterval(STATE.turnTimer);
+      STATE.turnTimer = null;
       const availableMoves = STATE.player.moves
-        .map((m, i) => ({ m, i }))
-        .filter(x => STATE.player.cooldowns[x.i] <= 0);
+        .map(function(m, i) { return { m: m, i: i }; })
+        .filter(function(x) { return STATE.player.cooldowns[x.i] <= 0; });
       if (availableMoves.length > 0) {
         const randomMove = pick(availableMoves);
         executePlayerTurn(randomMove.i);
@@ -2763,7 +2881,8 @@ function renderStatusPills(fighter) {
   return html;
 }
 
-function chaosLabel(c) {
+// Renamed to avoid conflict with existing functions
+function chaosLabelText(c) {
   if (c < 20) return 'Simmering';
   if (c < 40) return 'Unhinged';
   if (c < 60) return 'Volatile';
@@ -2771,7 +2890,7 @@ function chaosLabel(c) {
   return 'MAXIMUM CHAOS';
 }
 
-function clarityLabel(c) {
+function clarityLabelText(c) {
   if (c < 20) return 'Foggy';
   if (c < 40) return 'Hazy';
   if (c < 60) return 'Clearing';
